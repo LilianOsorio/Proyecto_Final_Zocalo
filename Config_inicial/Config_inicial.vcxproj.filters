@@ -55,6 +55,8 @@
     </None>
     <None Include="skybox.vs" />
     <None Include="skybox.frag" />
+    <None Include="info.vs" />
+    <None Include="info.frag" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="codigobase.cpp">

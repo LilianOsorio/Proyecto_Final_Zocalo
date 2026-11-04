@@ -24,6 +24,10 @@
 //Load Models
 #include "SOIL2/SOIL2.h"
 
+#define NOMINMAX
+#include <windows.h>
+
+#pragma comment(lib, "gdi32.lib")
 
 // Other includes
 
@@ -172,7 +176,7 @@ float npcLimiteDerecho = 4.0f;
 
 int npcDireccion = 1;
 // Camara de tercera persona
-float cameraDistance = 4.0f;
+float cameraDistance = 5.5f;
 float cameraHeight = 1.0f;
 
 bool step = false;
@@ -180,6 +184,138 @@ bool step = false;
 // Deltatime
 GLfloat deltaTime = 0.0f;
 GLfloat lastFrame = 0.0f;
+
+
+GLuint CrearTexturaInformativa(const wchar_t* titulo,
+	const wchar_t* mensaje)
+{
+	const int ancho = 512;
+	const int alto = 180;
+
+	HDC hdc = CreateCompatibleDC(NULL);
+
+	BITMAPINFO informacion = {};
+	informacion.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+	informacion.bmiHeader.biWidth = ancho;
+	informacion.bmiHeader.biHeight = -alto;
+	informacion.bmiHeader.biPlanes = 1;
+	informacion.bmiHeader.biBitCount = 32;
+	informacion.bmiHeader.biCompression = BI_RGB;
+
+	void* pixeles = nullptr;
+
+	HBITMAP bitmap = CreateDIBSection(
+		hdc,
+		&informacion,
+		DIB_RGB_COLORS,
+		&pixeles,
+		NULL,
+		0
+	);
+
+	HGDIOBJ bitmapAnterior = SelectObject(hdc, bitmap);
+
+	// Fondo oscuro
+	RECT fondo = { 0, 0, ancho, alto };
+
+	HBRUSH brocha = CreateSolidBrush(RGB(20, 28, 45));
+	FillRect(hdc, &fondo, brocha);
+	DeleteObject(brocha);
+
+	// Borde dorado
+	HBRUSH borde = CreateSolidBrush(RGB(220, 175, 65));
+	FrameRect(hdc, &fondo, borde);
+	DeleteObject(borde);
+
+	// Fuente del titulo
+	HFONT fuenteTitulo = CreateFontW(
+		30, 0, 0, 0, FW_BOLD,
+		FALSE, FALSE, FALSE,
+		DEFAULT_CHARSET,
+		OUT_DEFAULT_PRECIS,
+		CLIP_DEFAULT_PRECIS,
+		ANTIALIASED_QUALITY,
+		DEFAULT_PITCH,
+		L"Arial"
+	);
+
+	SelectObject(hdc, fuenteTitulo);
+
+	SetBkMode(hdc, TRANSPARENT);
+	SetTextColor(hdc, RGB(255, 215, 100));
+
+	RECT areaTitulo = { 22, 15, 490, 55 };
+
+	DrawTextW(
+		hdc,
+		titulo,
+		-1,
+		&areaTitulo,
+		DT_LEFT | DT_VCENTER | DT_SINGLELINE
+	);
+
+	// Fuente del mensaje
+	HFONT fuenteMensaje = CreateFontW(
+		23, 0, 0, 0, FW_NORMAL,
+		FALSE, FALSE, FALSE,
+		DEFAULT_CHARSET,
+		OUT_DEFAULT_PRECIS,
+		CLIP_DEFAULT_PRECIS,
+		ANTIALIASED_QUALITY,
+		DEFAULT_PITCH,
+		L"Arial"
+	);
+
+	SelectObject(hdc, fuenteMensaje);
+
+	SetTextColor(hdc, RGB(245, 245, 245));
+
+	RECT areaMensaje = { 22, 65, 485, 165 };
+
+	DrawTextW(
+		hdc,
+		mensaje,
+		-1,
+		&areaMensaje,
+		DT_LEFT | DT_WORDBREAK | DT_TOP
+	);
+
+	// Crear textura OpenGL
+	GLuint textura;
+
+	glGenTextures(1, &textura);
+	glBindTexture(GL_TEXTURE_2D, textura);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+
+	glTexImage2D(
+		GL_TEXTURE_2D,
+		0,
+		GL_RGBA,
+		ancho,
+		alto,
+		0,
+		GL_BGRA,
+		GL_UNSIGNED_BYTE,
+		pixeles
+	);
+
+	// Liberar recursos de Windows
+	SelectObject(hdc, bitmapAnterior);
+
+	DeleteObject(fuenteTitulo);
+	DeleteObject(fuenteMensaje);
+	DeleteObject(bitmap);
+
+	DeleteDC(hdc);
+
+	return textura;
+}
 
 GLuint LoadWallTexture(const char* path)
 {
@@ -225,7 +361,7 @@ GLuint LoadWallTexture(const char* path)
 
 GLuint wallVAO, wallVBO, wallEBO;
 
-GLuint texNorte, texSur, texEste, texOeste;
+GLuint texNorte, texSur, texEste, texOeste, texPalacio;
 
 void SetupWalls()
 {
@@ -268,8 +404,11 @@ void SetupWalls()
 	texNorte = LoadWallTexture("images/fachadas/norte.jpeg");
 	texSur = LoadWallTexture("images/fachadas/sur.jpeg");
 	texEste = LoadWallTexture("images/fachadas/este.jpeg");
-	texOeste = LoadWallTexture("images/fachadas/oeste.jpg");
+	texOeste = LoadWallTexture("images/fachadas/oeste.png");
+
+	texPalacio = LoadWallTexture("images/fachadas/palacio.jpeg");
 }
+
 
 
 // Dibujar cada muro
@@ -302,11 +441,9 @@ void DrawWall(
 	glUniform1i(glGetUniformLocation(shader.Program, "material.diffuse"), 0);
 	glUniform1i(glGetUniformLocation(shader.Program, "material.specular"), 0);
 
-	// Aumentar el brillo ambiental de las fachadas
-	glUniform3f(
-		glGetUniformLocation(shader.Program, "dirLight.ambient"),
-		0.45f, 0.45f, 0.50f
-	);
+	// Iluminación cálida y uniforme para las fachadas
+	glUniform3f(glGetUniformLocation(shader.Program, "dirLight.ambient"),0.55f, 0.53f, 0.50f);
+
 
 	glBindVertexArray(wallVAO);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
@@ -314,6 +451,8 @@ void DrawWall(
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
+
+
 
 int main()
 {
@@ -351,6 +490,8 @@ int main()
 
 	Shader skyboxShader("skybox.vs", "skybox.frag");
 
+	Shader infoShader("info.vs", "info.frag");
+
 	SetupWalls();
 
 	GLint linked = GL_FALSE;
@@ -387,6 +528,24 @@ int main()
 	Model Personas((char*)"Models/personas/Audience.obj");
 	Model Angel((char*)"Models/AngelIndependencia/AngelInd.obj");
 
+	Model carritoComida((char*)"Models/carritocomida/hot-dog-cart.obj");
+
+	// Texturas de los cuadros informativos
+	GLuint infoPozole = CrearTexturaInformativa(
+		L"EL POZOLE",
+		L"Uno de los platillos tradicionales de Mexico. Se disfruta especialmente durante las fiestas patrias."
+	);
+
+	GLuint infoFruta = CrearTexturaInformativa(
+		L"FRUTAS Y ANTOJITOS",
+		L"Los puestos y mercados forman parte de las celebraciones populares del 15 de septiembre."
+	);
+
+	GLuint infoHotDog = CrearTexturaInformativa(
+		L"HOT DOGS",
+		L"Un clasico de la comida callejera. Disfruta un delicioso hot dog durante las fiestas patrias."
+	);
+
 	GLuint VBO, VAO;
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
@@ -398,6 +557,50 @@ int main()
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
+
+	// VAO y VBO exclusivos para los cuadros informativos
+	GLuint infoVAO, infoVBO;
+
+	GLfloat infoVertices[] = {
+		// Posicion             // Coordenadas de textura
+		-1.0f, -0.5f, 0.0f,    0.0f, 1.0f,
+		1.0f, -0.5f, 0.0f,    1.0f, 1.0f,
+		1.0f,  0.5f, 0.0f,    1.0f, 0.0f,
+
+		-1.0f, -0.5f, 0.0f,    0.0f, 1.0f,
+		1.0f,  0.5f, 0.0f,    1.0f, 0.0f,
+		-1.0f,  0.5f, 0.0f,    0.0f, 0.0f
+	};
+
+	glGenVertexArrays(1, &infoVAO);
+	glGenBuffers(1, &infoVBO);
+
+	glBindVertexArray(infoVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, infoVBO);
+
+	glBufferData(
+		GL_ARRAY_BUFFER,
+		sizeof(infoVertices),
+		infoVertices,
+		GL_STATIC_DRAW
+	);
+
+	// Posicion
+	glVertexAttribPointer(
+		0, 3, GL_FLOAT, GL_FALSE,
+		5 * sizeof(GLfloat), (void*)0
+	);
+	glEnableVertexAttribArray(0);
+
+	// Coordenadas de textura
+	glVertexAttribPointer(
+		1, 2, GL_FLOAT, GL_FALSE,
+		5 * sizeof(GLfloat),
+		(void*)(3 * sizeof(GLfloat))
+	);
+	glEnableVertexAttribArray(1);
+
+	glBindVertexArray(0);
 
 	lightingShader.Use();
 	glUniform1i(glGetUniformLocation(lightingShader.Program, "Material.difuse"), 0);
@@ -719,15 +922,15 @@ int main()
 			0.0f
 		);
 
-		// MURO SUR
-		DrawWall(
-			lightingShader,
-			texSur,
-			glm::vec3(0.0f, centroY, 16.0f),
-			anchoMuro,
-			alturaMuro,
-			180.0f
-		);
+		//// MURO SUR
+		//DrawWall(
+		//	lightingShader,
+		//	texSur,
+		//	glm::vec3(0.0f, centroY, 16.0f),
+		//	anchoMuro,
+		//	alturaMuro,
+		//	180.0f
+		//);
 
 		// MURO ESTE
 		DrawWall(
@@ -748,6 +951,10 @@ int main()
 			alturaMuro,
 			90.0f
 		);
+
+		// MURO SUR - PALACIO NACIONAL
+		DrawWall(lightingShader, texPalacio, glm::vec3(0.0f, centroY, 16.0f),
+			anchoMuro, alturaMuro, 180.0f);
 
 		// Fachada del izquierda
 		DrawWall(lightingShader, texEste,
@@ -1053,6 +1260,197 @@ int main()
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 		puestoFruta.Draw(lightingShader);
+
+		//Carrito Hotdogs
+
+		model = glm::mat4(1.0f);
+
+		model = glm::translate(
+			model,
+			glm::vec3(-1.5f, -2.0f, -6.0f)
+		);
+
+		model = glm::scale(
+			model,
+			glm::vec3(1.5f, 1.5f, 1.5f)
+		);
+
+		glUniformMatrix4fv(
+			modelLoc,
+			1,
+			GL_FALSE,
+			glm::value_ptr(model)
+		);
+
+		glUniform1i(
+			glGetUniformLocation(lightingShader.Program, "transparency"),
+			0
+		);
+
+		carritoComida.Draw(lightingShader);
+
+		// Cuadros informativos de los puestos
+
+		glm::vec3 jugador = dogPos;
+
+		// Posicion de los cuadros
+		glm::vec3 posPozole(3.0f, 2.5f, 0.0f);
+		glm::vec3 posFruta(-6.0f, 2.5f, -2.0f);
+		glm::vec3 posCarrito(-1.5f, 2.5f, -6.0f);
+
+		// Distancia horizontal entre el perro y los puestos
+		float distanciaPozole = glm::length(
+			glm::vec2(jugador.x - posPozole.x,
+				jugador.z - posPozole.z)
+		);
+
+		float distanciaFruta = glm::length(
+			glm::vec2(jugador.x - posFruta.x,
+				jugador.z - posFruta.z)
+		);
+
+		float distanciaCarrito = glm::length(
+			glm::vec2(jugador.x - posCarrito.x,
+				jugador.z - posCarrito.z)
+		);
+
+		// Preparar shader informativo
+		infoShader.Use();
+
+		glUniformMatrix4fv(
+			glGetUniformLocation(infoShader.Program, "view"),
+			1, GL_FALSE, glm::value_ptr(view)
+		);
+
+		glUniformMatrix4fv(
+			glGetUniformLocation(infoShader.Program, "projection"),
+			1, GL_FALSE, glm::value_ptr(projection)
+		);
+
+		glUniform1i(
+			glGetUniformLocation(infoShader.Program, "textura"),
+			0
+		);
+
+		glActiveTexture(GL_TEXTURE0);
+
+		glBindVertexArray(infoVAO);
+
+		glDisable(GL_CULL_FACE);
+
+		// Cuafro 1 - pozole
+
+		if (distanciaPozole < 7.0f)
+		{
+			glm::vec3 direccion =
+				camera.GetPosition() - posPozole;
+
+			float angulo = atan2(
+				direccion.x,
+				direccion.z
+			) + glm::radians(180.0f);
+
+			glm::mat4 panel(1.0f);
+
+			panel = glm::translate(panel, posPozole);
+
+			panel = glm::rotate(
+				panel,
+				angulo,
+				glm::vec3(0.0f, 1.0f, 0.0f)
+			);
+
+			panel = glm::scale(
+				panel,
+				glm::vec3(-2.3f, 1.15f, 1.0f)
+			);
+
+			glUniformMatrix4fv(
+				glGetUniformLocation(infoShader.Program, "model"),
+				1, GL_FALSE, glm::value_ptr(panel)
+			);
+
+			glBindTexture(GL_TEXTURE_2D, infoPozole);
+
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+		}
+
+		// Cuadro 2 - frutas y antojitos
+
+		if (distanciaFruta < 7.0f)
+		{
+			glm::vec3 direccion =
+				camera.GetPosition() - posFruta;
+
+			float angulo = atan2(
+				direccion.x,
+				direccion.z
+			);
+
+			glm::mat4 panel(1.0f);
+
+			panel = glm::translate(panel, posFruta);
+
+			panel = glm::rotate(
+				panel,
+				angulo,
+				glm::vec3(0.0f, 1.0f, 0.0f)
+			);
+
+			panel = glm::scale(panel, glm::vec3(2.3f, 1.15f, 1.0f));
+
+			glUniformMatrix4fv(
+				glGetUniformLocation(infoShader.Program, "model"),
+				1, GL_FALSE, glm::value_ptr(panel)
+			);
+
+			glBindTexture(GL_TEXTURE_2D, infoFruta);
+
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+		}
+
+		// Cuadro 3 - carrito de hot dogs
+
+		if (distanciaCarrito < 7.0f)
+		{
+			glm::vec3 direccion = camera.GetPosition() - posCarrito;
+
+			float angulo = atan2(direccion.x, direccion.z);
+
+			glm::mat4 panel(1.0f);
+
+			panel = glm::translate(panel, posCarrito);
+
+			panel = glm::rotate(
+				panel,
+				angulo,
+				glm::vec3(0.0f, 1.0f, 0.0f)
+			);
+
+			panel = glm::scale(
+				panel,
+				glm::vec3(2.3f, 1.15f, 1.0f)
+			);
+
+			glUniformMatrix4fv(
+				glGetUniformLocation(infoShader.Program, "model"),
+				1,
+				GL_FALSE,
+				glm::value_ptr(panel)
+			);
+
+			glBindTexture(GL_TEXTURE_2D, infoHotDog);
+
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+		}
+
+		glBindVertexArray(0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+		glEnable(GL_CULL_FACE);
+
+		// Regresar al shader principal
+		lightingShader.Use();
 
 		// --- NPC 1: Cerca del poste ---
 		model = glm::mat4(1.0f);
