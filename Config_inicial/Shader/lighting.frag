@@ -152,12 +152,19 @@ void main( )
 
 
 
-   vec3 texColor = texture(material.diffuse, TexCoords).rgb;
-   color = vec4(result, texture(material.diffuse, TexCoords).a);
+   vec4 texColor = texture(material.diffuse, TexCoords);
 
-  if(color.a < 0.1 && transparency==1)
+float alpha = texColor.a;
 
-        discard;
+if (transparency == 1)
+{
+    alpha = 0.5;
+}
+
+color = vec4(result, alpha);
+
+if (color.a < 0.1)
+    discard;
 
 
 

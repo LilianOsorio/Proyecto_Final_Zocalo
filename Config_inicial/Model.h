@@ -41,6 +41,28 @@ public:
 		}
 	}
 
+	void DrawMaterial(Shader shader, string nombreMaterial)
+	{
+		for (GLuint i = 0; i < this->meshes.size(); i++)
+		{
+			if (this->meshes[i].materialName == nombreMaterial)
+			{
+				this->meshes[i].Draw(shader);
+			}
+		}
+	}
+
+	void PrintMaterialNames()
+	{
+		for (GLuint i = 0; i < this->meshes.size(); i++)
+		{
+			cout << "Malla " << i
+				<< " - Material: ["
+				<< this->meshes[i].materialName
+				<< "]" << endl;
+		}
+	}
+
 private:
 	/*  Model Data  */
 	vector<Mesh> meshes;
@@ -95,14 +117,16 @@ private:
 		}
 	}
 
-	Mesh processMesh(aiMesh *mesh, const aiScene *scene)
+	Mesh processMesh(aiMesh* mesh, const aiScene* scene)
 	{
 		// Data to fill
 		vector<Vertex> vertices;
 		vector<GLuint> indices;
 		vector<Texture> textures;
-		
+
 		glm::vec3 diffuseColor(0.8f, 0.8f, 0.8f);
+
+		string materialName = "";
 
 		// Walk through each of the mesh's vertices
 		for (GLuint i = 0; i < mesh->mNumVertices; i++)
@@ -110,7 +134,7 @@ private:
 			Vertex vertex;
 			glm::vec3 vector; // We declare a placeholder vector since assimp uses its own vector class that doesn't directly convert to glm's vec3 class so we transfer the data to this placeholder glm::vec3 first.
 
-							  // Positions
+			// Positions
 			vector.x = mesh->mVertices[i].x;
 			vector.y = mesh->mVertices[i].y;
 			vector.z = mesh->mVertices[i].z;
@@ -155,13 +179,20 @@ private:
 		if (mesh->mMaterialIndex >= 0)
 		{
 			aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+
+			aiString materialNameAssimp;
+
+			if (material->Get(AI_MATKEY_NAME, materialNameAssimp) == AI_SUCCESS)
+			{
+				materialName = materialNameAssimp.C_Str();
+			}
 			// We assume a convention for sampler names in the shaders. Each diffuse texture should be named
 			// as 'texture_diffuseN' where N is a sequential number ranging from 1 to MAX_SAMPLER_NUMBER.
 			// Same applies to other texture as the following list summarizes:
 			// Diffuse: texture_diffuseN
 			// Specular: texture_specularN
 			// Normal: texture_normalN
-			
+
 			aiColor4D color;
 
 			if (aiGetMaterialColor(
@@ -186,10 +217,13 @@ private:
 		}
 
 		// Return a mesh object created from the extracted mesh data
-		return Mesh(vertices,
-	indices,
-	textures,
-	diffuseColor);
+		return Mesh(
+			vertices,
+			indices,
+			textures,
+			diffuseColor,
+			materialName
+		);
 	}
 
 	// Checks all material textures of a given type and loads the textures if they're not loaded yet.

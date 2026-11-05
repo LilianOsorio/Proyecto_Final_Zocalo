@@ -47,15 +47,24 @@ public:
 
 	glm::vec3 diffuseColor;
 
+	string materialName;
+
+
 	/*  Functions  */
 	// Constructor
-	Mesh(vector<Vertex> vertices, vector<GLuint> indices,
-		vector<Texture> textures, glm::vec3 diffuseColor)
+	Mesh(
+		vector<Vertex> vertices,
+		vector<GLuint> indices,
+		vector<Texture> textures,
+		glm::vec3 diffuseColor,
+		string materialName = ""
+	)
 	{
 		this->vertices = vertices;
 		this->indices = indices;
 		this->textures = textures;
-		this->diffuseColor = diffuseColor;  // ESTA ES LA LÍNEA NUEVA
+		this->diffuseColor = diffuseColor;
+		this->materialName = materialName;
 
 		this->setupMesh();
 	}

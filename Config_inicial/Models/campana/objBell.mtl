@@ -1,0 +1,18 @@
+newmtl blinn5SG
+illum 4
+Kd 0.75 0.68 0.52
+Ka 0.20 0.18 0.14
+Tf 1.00 1.00 1.00
+map_Kd -mm 0.0119048 1 Marmite.jpg
+bump  -bm 0.1 Marmitebump.jpg
+Ni 1.00
+Ks 0.30 0.30 0.30
+map_Ks Marmitees.jpg
+newmtl lambert10SG
+illum 4
+Kd 0.75 0.68 0.52
+Ka 0.20 0.18 0.14
+Tf 1.00 1.00 1.00
+map_Kd WOOD05L_.JPG
+bump  -bm 0.1 WOOD05LB.JPG
+Ni 1.00

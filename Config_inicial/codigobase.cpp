@@ -7,6 +7,9 @@
 #include <vector>
 #include <string>
 
+#define MINIAUDIO_IMPLEMENTATION
+#include "miniaudio.h"
+
 // GLEW
 #include <GL/glew.h>
 
@@ -51,7 +54,7 @@ void DrawSidewalk(
 );
 
 // Window dimensions
-const GLuint WIDTH = 800, HEIGHT = 600;
+const GLuint WIDTH = 1280, HEIGHT = 720;
 int SCREEN_WIDTH, SCREEN_HEIGHT;
 
 // Camera
@@ -185,6 +188,9 @@ bool step = false;
 GLfloat deltaTime = 0.0f;
 GLfloat lastFrame = 0.0f;
 
+float intensidadCampana = 0.0f;
+
+glm::vec3 posicionCampana(0.0f, -2.0f, 11.0f);
 
 GLuint CrearTexturaInformativa(const wchar_t* titulo,
 	const wchar_t* mensaje)
@@ -456,6 +462,13 @@ void DrawWall(
 
 int main()
 {
+
+	// AUDIO
+	ma_engine engine;
+	ma_sound musica;
+	//campana
+	ma_sound campanaAudio;
+
 	// Init GLFW
 	glfwInit();
 
@@ -482,6 +495,62 @@ int main()
 		std::cout << "Failed to initialize GLEW" << std::endl;
 		return EXIT_FAILURE;
 	}
+
+	// Inicialiar audio
+
+	if (ma_engine_init(NULL, &engine) != MA_SUCCESS)
+	{
+		std::cout << "Error al inicializar el audio" << std::endl;
+		glfwTerminate();
+		return EXIT_FAILURE;
+	}
+
+	// Cargar musica ambiental
+	if (ma_sound_init_from_file(
+		&engine,
+		"audio/musica.mp3",
+		MA_SOUND_FLAG_STREAM,
+		NULL,
+		NULL,
+		&musica) != MA_SUCCESS)
+	{
+		std::cout << "No se pudo cargar la musica" << std::endl;
+
+		ma_engine_uninit(&engine);
+		glfwTerminate();
+		return EXIT_FAILURE;
+	}
+
+	// Cargar sonido de campana
+	if (ma_sound_init_from_file(
+		&engine,
+		"audio/campana.mp3",
+		0,
+		NULL,
+		NULL,
+		&campanaAudio) != MA_SUCCESS)
+	{
+		std::cout << "No se pudo cargar el sonido de la campana" << std::endl;
+
+		ma_sound_uninit(&musica);
+		ma_engine_uninit(&engine);
+		glfwTerminate();
+		return EXIT_FAILURE;
+	}
+
+	// Volumen de la campana
+	ma_sound_set_volume(&campanaAudio, 0.75f);
+
+	// Volumen inicial: 35%
+	ma_sound_set_volume(&musica, 0.35f);
+
+	// Reproducir continuamente
+	ma_sound_set_looping(&musica, MA_TRUE);
+
+	// Iniciar musica
+	ma_sound_start(&musica);
+
+	std::cout << "Musica ambiental iniciada correctamente" << std::endl;
 
 	glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
@@ -529,6 +598,9 @@ int main()
 	Model Angel((char*)"Models/AngelIndependencia/AngelInd.obj");
 
 	Model carritoComida((char*)"Models/carritocomida/hot-dog-cart.obj");
+	Model Campana((char*)"Models/campana/objBell.obj");
+	Campana.PrintMaterialNames();
+
 
 	// Texturas de los cuadros informativos
 	GLuint infoPozole = CrearTexturaInformativa(
@@ -608,6 +680,12 @@ int main()
 
 	glm::mat4 projection = glm::perspective(glm::radians(60.0f), (GLfloat)SCREEN_WIDTH / (GLfloat)SCREEN_HEIGHT, 0.1f, 100.0f);
 
+	// Control para detectar una nueva pulsacion de E
+	bool eWasPressed = false;
+
+	// Volumen actual de la musica
+	float volumenMusica = 0.35f;
+
 	// Game loop
 	while (!glfwWindowShouldClose(window))
 	{
@@ -649,10 +727,94 @@ int main()
 		Animation();
 
 
+		// Deteccion de proximidad entre el perro y la campana
+
+		glm::vec2 posicionPerro(dogPos.x, dogPos.z);
+
+		glm::vec2 posicionCampanaXZ(
+			posicionCampana.x,
+			posicionCampana.z
+		);
+
+		float distanciaCampana = glm::distance(
+			posicionPerro,
+			posicionCampanaXZ
+		);
+
+		// Activacion automatica de la campana
+
+		if (distanciaCampana < 5.0f)
+		{
+			// Activar movimiento de la campana
+			intensidadCampana += deltaTime * 2.0f;
+
+			// Reproducir sonido si todavia no esta sonando
+			if (!ma_sound_is_playing(&campanaAudio))
+			{
+				ma_sound_seek_to_pcm_frame(&campanaAudio, 0);
+				ma_sound_start(&campanaAudio);
+			}
+		}
+		else
+		{
+			// Reducir movimiento al alejarse
+			intensidadCampana -= deltaTime * 1.2f;
+
+			// Detener sonido
+			ma_sound_stop(&campanaAudio);
+		}
+
+		// Limitar intensidad entre 0 y 1
+		intensidadCampana = glm::clamp(
+			intensidadCampana,
+			0.0f,
+			1.0f
+		);
+
+
+		// Activar movimiento cuando el perro se acerque
+		if (distanciaCampana < 5.0f)
+		{
+			intensidadCampana += deltaTime * 2.0f;
+		}
+		else
+		{
+			intensidadCampana -= deltaTime * 1.2f;
+		}
+
+		// Detener sonido si el perro se aleja
+		if (distanciaCampana >= 5.0f)
+		{
+			ma_sound_stop(&campanaAudio);
+		}
+		
+
+		// Limitar intensidad entre 0 y 1
+		intensidadCampana = glm::clamp(
+			intensidadCampana,
+			0.0f,
+			1.0f
+		);
+
+		// Mezcla del audio, bajar la musica mientras suena la campana y subirla cuando termina
+
+		float volumenObjetivo =
+			ma_sound_is_playing(&campanaAudio) ? 0.15f : 0.35f;
+
+		volumenMusica +=
+			(volumenObjetivo - volumenMusica) * deltaTime * 3.0f;
+
+		ma_sound_set_volume(&musica, volumenMusica);
+
+
 		glClearColor(0.008f, 0.012f, 0.045f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		glEnable(GL_DEPTH_TEST);
+
+		// Habilitar transparencia
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 		glm::mat4 modelTemp = glm::mat4(1.0f);
 
@@ -760,7 +922,7 @@ int main()
 		// SpotLight
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "spotLight.position"), camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "spotLight.direction"), camera.GetFront().x, camera.GetFront().y, camera.GetFront().z);
-		
+
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "spotLight.ambient"), 0.18f, 0.16f, 0.10f);
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "spotLight.diffuse"), 0.65f, 0.58f, 0.42f);
 
@@ -1261,6 +1423,75 @@ int main()
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 		puestoFruta.Draw(lightingShader);
 
+
+		// CAMPANA CON MOVIMIENTO DE PENDULO
+
+		glm::mat4 modelBase = glm::mat4(1.0f);
+
+		modelBase = glm::translate(
+			modelBase,
+			posicionCampana
+		);
+
+		modelBase = glm::scale(
+			modelBase,
+			glm::vec3(0.6f)
+		);
+
+		lightingShader.Use();
+
+		// ---------------------------------
+		// BASE SEMITRANSPARENTE
+		// ---------------------------------
+
+		glUniformMatrix4fv(
+			glGetUniformLocation(lightingShader.Program, "model"),
+			1,
+			GL_FALSE,
+			glm::value_ptr(modelBase)
+		);
+
+		glUniform1i(
+			glGetUniformLocation(lightingShader.Program, "transparency"),
+			1
+		);
+
+		Campana.DrawMaterial(lightingShader, "lambert10SG");
+
+
+		// ---------------------------------
+		// CAMPANA METALICA OPACA
+		// ---------------------------------
+
+		glm::mat4 modelMetal = modelBase;
+
+		float anguloCampana =
+			sin(glfwGetTime() * 8.0f) *
+			glm::radians(12.0f) *
+			intensidadCampana;
+
+		modelMetal = glm::rotate(
+			modelMetal,
+			anguloCampana,
+			glm::vec3(1.0f, 0.0f, 0.0f)
+		);
+
+		glUniformMatrix4fv(
+			glGetUniformLocation(lightingShader.Program, "model"),
+			1,
+			GL_FALSE,
+			glm::value_ptr(modelMetal)
+		);
+
+		glUniform1i(
+			glGetUniformLocation(lightingShader.Program, "transparency"),
+			0
+		);
+
+		Campana.DrawMaterial(lightingShader, "blinn5SG");
+		
+		glDisable(GL_BLEND);
+		
 		//Carrito Hotdogs
 
 		model = glm::mat4(1.0f);
@@ -1576,6 +1807,11 @@ int main()
 
 		glfwSwapBuffers(window);
 	}
+
+	// Liberar recursos de audio
+	ma_sound_uninit(&campanaAudio);
+	ma_sound_uninit(&musica);
+	ma_engine_uninit(&engine);
 
 	glfwTerminate();
 	return 0;
