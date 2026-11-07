@@ -368,6 +368,7 @@ GLuint LoadWallTexture(const char* path)
 GLuint wallVAO, wallVBO, wallEBO;
 
 GLuint texNorte, texSur, texEste, texOeste, texPalacio;
+GLuint texAguila;
 
 void SetupWalls()
 {
@@ -413,6 +414,8 @@ void SetupWalls()
 	texOeste = LoadWallTexture("images/fachadas/oeste.png");
 
 	texPalacio = LoadWallTexture("images/fachadas/palacio.jpeg");
+
+	texAguila = LoadWallTexture("images/fachadas/aguila.jpg");
 }
 
 
@@ -436,10 +439,14 @@ void DrawWall(
 	model = glm::rotate(model, glm::radians(rotation), glm::vec3(0, 1, 0));
 	model = glm::scale(model, glm::vec3(width, height, 1.0f));
 
+
+
 	glUniformMatrix4fv(
 		glGetUniformLocation(shader.Program, "model"),
 		1, GL_FALSE, glm::value_ptr(model)
 	);
+
+
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture);
@@ -457,6 +464,8 @@ void DrawWall(
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
+
+
 
 
 
@@ -1114,21 +1123,25 @@ int main()
 			90.0f
 		);
 
-		// FACHADAS LATERALES ALINEADAS CON LAS BANQUETAS
+		// FACHADAS LATERALES EXTENDIDAS
+
+
+		// LADO IZQUIERDO
 		DrawWall(
 			lightingShader,
 			texEste,
-			glm::vec3(-6.1f, centroY, -35.5f),
-			39.0f,
+			glm::vec3(-6.1f, centroY, -51.75f),
+			71.5f,
 			alturaMuro,
 			90.0f
 		);
 
+		// LADO DERECHO
 		DrawWall(
 			lightingShader,
 			texSur,
-			glm::vec3(6.1f, centroY, -35.5f),
-			39.0f,
+			glm::vec3(6.1f, centroY, -51.75f),
+			71.5f,
 			alturaMuro,
 			-90.0f
 		);
@@ -1151,6 +1164,17 @@ int main()
 			32.0f,          // Ancho
 			alturaMuro,     // Misma altura que los otros muros
 			180.0f
+		);
+
+		// MURO DE FONDO - AGUILA PATRIA
+
+		DrawWall(
+			lightingShader,
+			texAguila,
+			glm::vec3(0.0f, centroY, -68.0f),
+			12.2f,
+			alturaMuro,
+			0.0f
 		);
 
 		// Volver a activar el descarte de caras
