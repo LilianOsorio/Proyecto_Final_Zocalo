@@ -1,4 +1,4 @@
-// Proyecto Zocalo 
+ï»¿// Proyecto Zocalo 
 //Se agrego banderas, luces y el angel
 
 
@@ -447,8 +447,8 @@ void DrawWall(
 	glUniform1i(glGetUniformLocation(shader.Program, "material.diffuse"), 0);
 	glUniform1i(glGetUniformLocation(shader.Program, "material.specular"), 0);
 
-	// Iluminación cálida y uniforme para las fachadas
-	glUniform3f(glGetUniformLocation(shader.Program, "dirLight.ambient"),0.55f, 0.53f, 0.50f);
+	// Iluminaciï¿½n cï¿½lida y uniforme para las fachadas
+	glUniform3f(glGetUniformLocation(shader.Program, "dirLight.ambient"), 0.55f, 0.53f, 0.50f);
 
 
 	glBindVertexArray(wallVAO);
@@ -787,7 +787,7 @@ int main()
 		{
 			ma_sound_stop(&campanaAudio);
 		}
-		
+
 
 		// Limitar intensidad entre 0 y 1
 		intensidadCampana = glm::clamp(
@@ -859,7 +859,7 @@ int main()
 		glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[1].linear"), 0.09f);
 		glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[1].quadratic"), 0.032f);
 
-		// iluminación patriotica
+		// iluminaciï¿½n patriotica
 
 		// LUZ VERDE
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[2].position"),
@@ -1068,8 +1068,8 @@ int main()
 		DrawWall(
 			lightingShader,
 			texNorte,
-			glm::vec3(-10.0f, centroY, -16.0f),
-			12.0f,
+			glm::vec3(-11.0f, centroY, -16.0f),
+			10.0f,
 			alturaMuro,
 			0.0f
 		);
@@ -1078,8 +1078,8 @@ int main()
 		DrawWall(
 			lightingShader,
 			texNorte,
-			glm::vec3(10.0f, centroY, -16.0f),
-			12.0f,
+			glm::vec3(11.0f, centroY, -16.0f),
+			10.0f,
 			alturaMuro,
 			0.0f
 		);
@@ -1114,18 +1114,24 @@ int main()
 			90.0f
 		);
 
-		// MURO SUR - PALACIO NACIONAL
-		DrawWall(lightingShader, texPalacio, glm::vec3(0.0f, centroY, 16.0f),
-			anchoMuro, alturaMuro, 180.0f);
+		// FACHADAS LATERALES ALINEADAS CON LAS BANQUETAS
+		DrawWall(
+			lightingShader,
+			texEste,
+			glm::vec3(-6.1f, centroY, -35.5f),
+			39.0f,
+			alturaMuro,
+			90.0f
+		);
 
-		// Fachada del izquierda
-		DrawWall(lightingShader, texEste,
-			glm::vec3(-7.5f, centroY, -35.5f),
-			39.0f, alturaMuro, 90.0f);
-
-		DrawWall(lightingShader, texSur,
-			glm::vec3(7.5f, centroY, -35.5f),
-			39.0f, alturaMuro, -90.0f);
+		DrawWall(
+			lightingShader,
+			texSur,
+			glm::vec3(6.1f, centroY, -35.5f),
+			39.0f,
+			alturaMuro,
+			-90.0f
+		);
 
 		//// Edificio del fondo
 		//DrawWall(
@@ -1136,6 +1142,16 @@ int main()
 		//	alturaMuro,
 		//	0.0f
 		//);
+
+		// PALACIO NACIONAL - MURO DEL FONDO
+		DrawWall(
+			lightingShader,
+			texPalacio,
+			glm::vec3(0.0f, centroY, 15.0f),
+			32.0f,          // Ancho
+			alturaMuro,     // Misma altura que los otros muros
+			180.0f
+		);
 
 		// Volver a activar el descarte de caras
 		glEnable(GL_CULL_FACE);
@@ -1489,9 +1505,9 @@ int main()
 		);
 
 		Campana.DrawMaterial(lightingShader, "blinn5SG");
-		
+
 		glDisable(GL_BLEND);
-		
+
 		//Carrito Hotdogs
 
 		model = glm::mat4(1.0f);
@@ -1925,12 +1941,12 @@ void DoMovement()
 
 	if (dogPos.x >= -4.0f && dogPos.x <= 4.0f)
 	{
-		// Permite caminar por toda la calle hasta el Ángel
+		// Permite caminar por toda la calle hasta el ï¿½ngel
 		dogPos.z = glm::clamp(dogPos.z, -65.0f, 15.0f);
 	}
 	else
 	{
-		// Fuera de la entrada, conserva los límites de la plaza
+		// Fuera de la entrada, conserva los lï¿½mites de la plaza
 		dogPos.z = glm::clamp(dogPos.z, -15.0f, 15.0f);
 	}
 
@@ -2027,7 +2043,7 @@ void Animation()
 		FLegs = movement * 28.0f;
 		RLegs = movement * 28.0f;
 
-		// Pequeños movimientos de cabeza y cola
+		// Pequeï¿½os movimientos de cabeza y cola
 		head = sin(walkTime * 8.0f) * 2.0f;
 		tail = sin(walkTime * 10.0f) * 5.0f;
 	}
@@ -2059,4 +2075,3 @@ void MouseCallback(GLFWwindow* window, double xPos, double yPos)
 
 	camera.ProcessMouseMovement(xOffset, yOffset);
 }
-
