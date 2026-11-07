@@ -60,6 +60,8 @@
     <None Include="skybox.frag" />
     <None Include="info.vs" />
     <None Include="info.frag" />
+    <None Include="fireworks.frag" />
+    <None Include="fireworks.vs" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="codigobase.cpp">

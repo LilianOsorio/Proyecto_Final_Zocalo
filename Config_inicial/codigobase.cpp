@@ -1,5 +1,5 @@
 ﻿// Proyecto Zocalo 
-//Se agrego banderas, luces y el angel
+//Se agregaron fuesgos artificiales y mejoras de fachadas
 
 
 #include <iostream>
@@ -395,6 +395,7 @@ void SetupWalls()
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, wallEBO);
+
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
@@ -480,6 +481,11 @@ int main()
 
 	// Init GLFW
 	glfwInit();
+
+	// Configurar OpenGL 3.3
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Zocalo", nullptr, nullptr);
 
@@ -570,9 +576,13 @@ int main()
 
 	Shader infoShader("info.vs", "info.frag");
 
+	Shader fireworksShader("fireworks.vs", "fireworks.frag");
+
+
 	SetupWalls();
 
 	GLint linked = GL_FALSE;
+
 
 
 
@@ -683,7 +693,40 @@ int main()
 
 	glBindVertexArray(0);
 
+	//VAO Y VBO PARA LOS FUEGOS ARTIFICIALES
+
+
+	GLuint fireworksVAO, fireworksVBO;
+
+	GLfloat fireworksVertices[] = {
+		0.0f, 0.0f, 0.0f
+	};
+
+	glGenVertexArrays(1, &fireworksVAO);
+	glGenBuffers(1, &fireworksVBO);
+
+	glBindVertexArray(fireworksVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, fireworksVBO);
+
+	glBufferData(
+		GL_ARRAY_BUFFER,
+		150 * 3 * sizeof(GLfloat),
+		nullptr,
+		GL_DYNAMIC_DRAW
+	);
+
+	glVertexAttribPointer(
+		0, 3, GL_FLOAT, GL_FALSE,
+		3 * sizeof(GLfloat), (GLvoid*)0
+	);
+
+	glEnableVertexAttribArray(0);
+
+	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
 	lightingShader.Use();
+
 	glUniform1i(glGetUniformLocation(lightingShader.Program, "Material.difuse"), 0);
 	glUniform1i(glGetUniformLocation(lightingShader.Program, "Material.specular"), 1);
 
@@ -956,6 +999,97 @@ int main()
 
 		glm::mat4 model(1);
 
+
+		// ======================================
+		// FUEGOS ARTIFICIALES CON ZONA DE CAMPANA
+		// ======================================
+		const int NUM_PARTICULAS_POR_FUEGO = 150;
+		const int CANTIDAD_FUEGOS = 6; 
+
+		static float tiemposExplosion[CANTIDAD_FUEGOS] = { 0.0f, 0.3f, 0.6f, 0.9f, 1.2f, 1.5f };
+
+		static glm::vec3 centrosFuegos[CANTIDAD_FUEGOS] = {
+			glm::vec3(0.0f, 21.0f, 11.0f),  
+			glm::vec3(-4.0f, 19.0f, -4.0f),  // Cerca de la zona de puestos
+			glm::vec3(3.0f, 20.0f, 2.0f),    // Cerca de puestos delanteros
+			glm::vec3(-7.0f, 18.0f, -28.0f), // Zona intermedia de la plaza
+			glm::vec3(0.0f, 22.0f, -55.0f),  // Fondo (Ángel / Águila)
+			glm::vec3(6.0f, 19.0f, -42.0f)   // Fondo derecha
+		};
+
+		// Colores TRICOLOR patrios (Verde, Blanco, Rojo)
+		static glm::vec3 coloresFuegos[CANTIDAD_FUEGOS] = {
+			glm::vec3(0.95f, 0.05f, 0.05f),// Rojo (para la campana)
+			glm::vec3(0.0f, 0.85f, 0.2f),  // Verde
+			glm::vec3(1.0f, 1.0f, 1.0f),   // Blanco
+			glm::vec3(0.95f, 0.05f, 0.05f),// Rojo
+			glm::vec3(0.0f, 0.85f, 0.2f),  // Verde
+			glm::vec3(1.0f, 1.0f, 1.0f)    // Blanco
+		};
+
+		static glm::vec3 velocidadesFuego[NUM_PARTICULAS_POR_FUEGO];
+		static bool inicializadoVelocidades = false;
+
+		if (!inicializadoVelocidades) {
+			for (int i = 0; i < NUM_PARTICULAS_POR_FUEGO; i++) {
+				float anguloH = i * 2.4f;
+				float anguloV = (i % 13) * 0.25f - 1.25f;
+				glm::vec3 dir(cos(anguloV) * cos(anguloH), sin(anguloV), cos(anguloV) * sin(anguloH));
+
+				// Rellenar el volumen interno de la esfera
+				float factorVolumen = 0.2f + 0.8f * ((i * 17) % 100) / 100.0f;
+				velocidadesFuego[i] = dir * (1.0f + factorVolumen * 4.0f);
+			}
+			inicializadoVelocidades = true;
+		}
+
+		fireworksShader.Use();
+		glUniformMatrix4fv(glGetUniformLocation(fireworksShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+		glUniformMatrix4fv(glGetUniformLocation(fireworksShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+		glUniformMatrix4fv(glGetUniformLocation(fireworksShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0f)));
+
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		glEnable(GL_PROGRAM_POINT_SIZE);
+
+		glBindVertexArray(fireworksVAO);
+
+		for (int f = 0; f < CANTIDAD_FUEGOS; f++) {
+			tiemposExplosion[f] += deltaTime;
+
+			if (tiemposExplosion[f] >= 2.0f) {
+				tiemposExplosion[f] = 0.0f;
+			}
+
+			float t = tiemposExplosion[f];
+			std::vector<GLfloat> posicionesFuegoTemp(NUM_PARTICULAS_POR_FUEGO * 3);
+
+			for (int i = 0; i < NUM_PARTICULAS_POR_FUEGO; i++) {
+				float friccion = exp(-1.5f * t);
+				glm::vec3 desplazamiento = velocidadesFuego[i] * (1.0f - friccion) / 1.5f;
+				glm::vec3 posicion = centrosFuegos[f] + desplazamiento + glm::vec3(0.0f, -2.5f * t * t, 0.0f);
+
+				posicionesFuegoTemp[i * 3] = posicion.x;
+				posicionesFuegoTemp[i * 3 + 1] = posicion.y;
+				posicionesFuegoTemp[i * 3 + 2] = posicion.z;
+			}
+
+			glBindBuffer(GL_ARRAY_BUFFER, fireworksVBO);
+			glBufferData(GL_ARRAY_BUFFER, posicionesFuegoTemp.size() * sizeof(GLfloat), posicionesFuegoTemp.data(), GL_DYNAMIC_DRAW);
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+			glUniform3f(
+				glGetUniformLocation(fireworksShader.Program, "objectColor"),
+				coloresFuegos[f].r, coloresFuegos[f].g, coloresFuegos[f].b
+			);
+
+			glDrawArrays(GL_POINTS, 0, NUM_PARTICULAS_POR_FUEGO);
+		}
+
+		glBindVertexArray(0);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		lightingShader.Use();
+
 		// Explanada
 
 		glDisable(GL_CULL_FACE);
@@ -1069,8 +1203,8 @@ int main()
 		);
 
 		// Dimensiones de los muros
-		float alturaMuro = 12.0f;
-		float centroY = 4.0f;
+		float alturaMuro = 13.0f;
+		float centroY = 3.0f;
 		float anchoMuro = 32.0f;
 
 		// MURO NORTE - LADO IZQUIERDO

@@ -27,6 +27,8 @@
     <ClInclude Include="Skybox.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="fireworks.frag" />
+    <None Include="fireworks.vs" />
     <None Include="info.frag" />
     <None Include="info.vs" />
     <None Include="Shader\lamp.frag" />
