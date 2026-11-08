@@ -82,8 +82,14 @@ glm::vec3 pointLightPositions[] = {
 	glm::vec3(0.0f, 5.0f, -30.0f),
 
 	// Luz roja
-	glm::vec3(3.5f, 5.0f, -42.0f)
+	glm::vec3(3.5f, 5.0f, -42.0f),
+
+
 };
+
+
+
+
 
 float vertices[] = {
 	 -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
@@ -167,17 +173,23 @@ glm::vec3 dogPos(0.0f, -1.5f, 0.0f);
 float dogYaw = 0.0f;
 float dogRot = 0.0f;
 
-// NPC
+// NPC 1
 
 float npcPosX = -4.0f;
 float npcPosZ = 2.0f;
-
 float npcVelocidad = 1.5f;
-
 float npcLimiteIzquierdo = -4.0f;
 float npcLimiteDerecho = 4.0f;
-
 int npcDireccion = 1;
+
+// NPC 2 (Nuevo - se mueve verticalmente a lo largo de la calle)
+float npc2PosZ = -10.0f;
+float npc2PosX = 2.0f;
+float npc2Velocidad = 1.2f;
+float npc2LimiteFondo = -35.0f;
+float npc2LimiteFrente = -5.0f;
+int npc2Direccion = 1;
+
 // Camara de tercera persona
 float cameraDistance = 5.5f;
 float cameraHeight = 1.0f;
@@ -613,14 +625,25 @@ int main()
 	Model Lantern((char*)"Models/lantern/lantern.obj");
 	Model Zorro((char*)"Models/Zorro/zorroCompleto.obj");
 	Model puestoFruta((char*)"Models/puesto2/fruit shop.obj");
-	Model Personas((char*)"Models/personas/Audience.obj");
 	Model Angel((char*)"Models/AngelIndependencia/AngelInd.obj");
+
+	Model Persona1((char*)"Models/persona1/Audience.obj");
+	Model Persona2((char*)"Models/persona2/Audience.obj");
+	Model Persona3((char*)"Models/persona3/Audience.obj");
+	Model Persona4((char*)"Models/persona4/Audience.obj");
+	Model Persona5((char*)"Models/persona5/Audience.obj");
+	Model Persona6((char*)"Models/persona6/Audience.obj");
+	Model Persona7((char*)"Models/persona7/Audience.obj");
+	Model Persona8((char*)"Models/persona8/Audience.obj");
 
 	Model carritoComida((char*)"Models/carritocomida/hot-dog-cart.obj");
 	Model Campana((char*)"Models/campana/objBell.obj");
 	Campana.PrintMaterialNames();
 
 
+
+
+	
 	// Texturas de los cuadros informativos
 	GLuint infoPozole = CrearTexturaInformativa(
 		L"EL POZOLE",
@@ -762,6 +785,7 @@ int main()
 
 		tiempoAnteriorNPC = tiempoActualNPC;
 
+		// Actualizar NPC 1 (Horizontal)
 		npcPosX += npcVelocidad * npcDireccion * deltaTimeNPC;
 
 		if (npcPosX >= npcLimiteDerecho)
@@ -773,6 +797,20 @@ int main()
 		{
 			npcPosX = npcLimiteIzquierdo;
 			npcDireccion = 1;
+		}
+
+		// Actualizar NPC 2 (Vertical a lo largo de la calle)
+		npc2PosZ += npc2Velocidad * npc2Direccion * deltaTimeNPC;
+
+		if (npc2PosZ >= npc2LimiteFrente)
+		{
+			npc2PosZ = npc2LimiteFrente;
+			npc2Direccion = -1;
+		}
+		else if (npc2PosZ <= npc2LimiteFondo)
+		{
+			npc2PosZ = npc2LimiteFondo;
+			npc2Direccion = 1;
 		}
 
 		DoMovement();
@@ -911,6 +949,20 @@ int main()
 		glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[1].linear"), 0.09f);
 		glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[1].quadratic"), 0.032f);
 
+		// Posiciones de las point lights 
+		glm::vec3 pointLightPositions[] = {
+			// 0: Luz animada original
+			glm::vec3(0.0f, 2.0f, 0.0f),
+
+			// 1: Luz calida original
+			glm::vec3(8.5f, 0.3f, 0.0f),
+
+			// 2, 3, 4: Luces patrióticas (calle)
+			glm::vec3(-3.5f, 5.0f, -18.0f),
+			glm::vec3(0.0f, 5.0f, -30.0f),
+			glm::vec3(3.5f, 5.0f, -42.0f),
+		};
+
 		// iluminaci�n patriotica
 
 		// LUZ VERDE
@@ -970,7 +1022,8 @@ int main()
 				(base + "quadratic").c_str()), 0.032f);
 		}
 
-
+		
+		
 		// SpotLight
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "spotLight.position"), camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "spotLight.direction"), camera.GetFront().x, camera.GetFront().y, camera.GetFront().z);
@@ -1001,7 +1054,7 @@ int main()
 
 
 		// ======================================
-		// FUEGOS ARTIFICIALES CON ZONA DE CAMPANA
+		// FUEGOS ARTIFICIALES 
 		// ======================================
 		const int NUM_PARTICULAS_POR_FUEGO = 150;
 		const int CANTIDAD_FUEGOS = 6; 
@@ -1505,6 +1558,7 @@ int main()
 		);
 
 
+
 		// Body
 		glm::vec3 dogPosElevado = dogPos + glm::vec3(0.0f, 0.05f, 0.0f);
 		modelTemp = model = glm::translate(glm::mat4(1.0f), dogPosElevado);
@@ -1857,71 +1911,281 @@ int main()
 		// Regresar al shader principal
 		lightingShader.Use();
 
-		// --- NPC 1: Cerca del poste ---
+		// ==========================================
+			// MULTITUD MASIVA POR TODA LA PLAZA Y MUROS
+			// ==========================================
+
+			// --- ZONA PERIFÉRICA Y CERCA DE LOS MUROS (Plancha: Y = -2.0f) ---
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-14.0f, -2.0f, -10.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona2.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-14.0f, -2.0f, -5.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona3.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-14.0f, -2.0f, 2.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(45.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona4.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(14.0f, -2.0f, -8.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona5.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(14.0f, -2.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona6.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(14.0f, -2.0f, 6.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(-135.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona7.Draw(lightingShader);
+
+		// Cerca del Palacio Nacional (Muro Sur / Fondo de la plaza)
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-8.0f, -2.0f, 13.5f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(0.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona8.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-4.0f, -2.0f, 13.5f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(15.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona1.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(4.0f, -2.0f, 13.5f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(-15.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona2.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(8.0f, -2.0f, 13.5f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(0.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona3.Draw(lightingShader);
+
+
+		// --- ZONA DE PUESTOS Y COMIDA ---
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-5.2f, -2.0f, -2.5f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona3.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-7.0f, -2.0f, -1.5f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(45.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona4.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-1.5f, -2.0f, -4.6f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona5.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-1.0f, -2.0f, -6.5f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(170.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona6.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(3.0f, -2.0f, 1.8f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona7.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(5.0f, -2.0f, 2.5f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(-135.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona8.Draw(lightingShader);
+
+
+		// --- CENTRO DE LA EXPLANADA ---
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(0.0f, -2.0f, -2.0f));
 		model = glm::scale(model, glm::vec3(0.01f));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		Personas.Draw(lightingShader);
+		Persona1.Draw(lightingShader);
 
-
-		// --- NPC 2: Cerca del puesto de frutas ---
 		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(5.0f, -2.0f, -4.0f));
+		model = glm::translate(model, glm::vec3(-3.0f, -2.0f, 3.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(30.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona2.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(3.5f, -2.0f, 4.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(-30.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona3.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-6.0f, -2.0f, 6.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(60.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona4.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(6.0f, -2.0f, 6.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(-60.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona5.Draw(lightingShader);
+
+
+		// --- HILERA SOBRE LAS BANQUETAS (Y = -1.70f para pisar bien la banqueta) ---
+		// Banqueta Izquierda (X = -5.5f)
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-5.5f, -1.70f, -12.0f));
 		model = glm::scale(model, glm::vec3(0.01f));
 		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0, 1, 0));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		Personas.Draw(lightingShader);
-
-
-		// NPC 3: Caminando de un lado a otro
+		Persona6.Draw(lightingShader);
 
 		model = glm::mat4(1.0f);
-
-		model = glm::translate(
-			model,
-			glm::vec3(npcPosX, -2.0f, npcPosZ)
-		);
-
-		model = glm::scale(
-			model,
-			glm::vec3(0.01f, 0.01f, 0.01f)
-		);
-
-		if (npcDireccion == 1)
-		{
-			model = glm::rotate(
-				model,
-				glm::radians(90.0f),
-				glm::vec3(0.0f, 1.0f, 0.0f)
-			);
-		}
-		else
-		{
-			model = glm::rotate(
-				model,
-				glm::radians(-90.0f),
-				glm::vec3(0.0f, 1.0f, 0.0f)
-			);
-		}
-
-		glUniformMatrix4fv(
-			modelLoc,
-			1,
-			GL_FALSE,
-			glm::value_ptr(model)
-		);
-
-		Personas.Draw(lightingShader);
-
-
-		// --- NPC 4: Cerca del centro ---
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(3.0f, -2.0f, 5.0f));
+		model = glm::translate(model, glm::vec3(-5.5f, -1.70f, -20.0f));
 		model = glm::scale(model, glm::vec3(0.01f));
-		model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0, 1, 0));
+		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0, 1, 0));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		Personas.Draw(lightingShader);
+		Persona7.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-5.5f, -1.70f, -28.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona8.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-5.5f, -1.70f, -36.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona1.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-5.5f, -1.70f, -44.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona2.Draw(lightingShader);
+
+		// Banqueta Derecha (X = 5.5f)
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(5.5f, -1.70f, -15.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona3.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(5.5f, -1.70f, -22.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona4.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(5.5f, -1.70f, -30.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona5.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(5.5f, -1.70f, -38.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona6.Draw(lightingShader);
+
+
+		// --- ESPECTADORES FRENTE AL ÁNGEL DE LA INDEPENDENCIA (Z = -47.0f para no encimarse) ---
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-2.5f, -2.0f, -47.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0, 1, 0)); // Viendo hacia el Ángel
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona7.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(2.5f, -2.0f, -47.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0, 1, 0)); // Viendo hacia el Ángel
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona8.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-1.0f, -2.0f, -46.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(170.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona1.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(1.0f, -2.0f, -46.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(190.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona2.Draw(lightingShader);
+
+
+		// --- NPCs DINÁMICOS EN MOVIMIENTO ---
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(npcPosX, -2.0f, npcPosZ));
+		model = glm::scale(model, glm::vec3(0.01f));
+		if (npcDireccion == 1)
+			model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		else
+			model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona7.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(npc2PosX, -2.0f, npc2PosZ));
+		model = glm::scale(model, glm::vec3(0.01f));
+		if (npc2Direccion == 1)
+			model = glm::rotate(model, glm::radians(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		else
+			model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona8.Draw(lightingShader);
+		
 
 		// ANGEL DE LA INDEPENDENCIA
 		glDisable(GL_CULL_FACE);
@@ -1971,7 +2235,21 @@ int main()
 		glUniform3f(glGetUniformLocation(lampShader.Program, "objectColor"), 1.0f, 0.72f, 0.35f);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
+		// Pequena fuente visible dentro del farol para acompanhar su luz.
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, pointLightPositions[1]);
+		model = glm::scale(model, glm::vec3(0.10f, 0.16f, 0.10f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		glUniform3f(glGetUniformLocation(lampShader.Program, "objectColor"), 1.0f, 0.72f, 0.35f);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
 
+
+
+		glBindVertexArray(0);
+
+
+		// Dibujar cielo nocturno
+		nightSky.Draw(skyboxShader, view, projection);
 
 		glBindVertexArray(0);
 
