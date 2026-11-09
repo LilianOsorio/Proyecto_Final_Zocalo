@@ -89,9 +89,6 @@ glm::vec3 pointLightPositions[] = {
 };
 
 
-
-
-
 float vertices[] = {
 	 -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
 		0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
@@ -619,7 +616,7 @@ int main()
 	Model B_RightLeg((char*)"Models/B_RightLegDog.obj");
 	Model B_LeftLeg((char*)"Models/B_LeftLegDog.obj");
 	Model Piso((char*)"Models/piso/Mrf+Pavement+Set03.obj");
-	//Model Ball((char*)"Models/ball.obj");
+
 
 	Model Puesto((char*)"Models/puesto/asian food vendor.obj");
 	Model Lampara((char*)"Models/lampara/Street_lamp_1.obj");
@@ -629,6 +626,7 @@ int main()
 	Model SombreroCharro((char*)"Models/Zorro/sombrero_charro.obj");
 	Model puestoFruta((char*)"Models/puesto2/fruit shop.obj");
 	Model Angel((char*)"Models/AngelIndependencia/AngelInd.obj");
+
 
 	Model Persona1((char*)"Models/persona1/Audience.obj");
 	Model Persona2((char*)"Models/persona2/Audience.obj");
@@ -1658,14 +1656,52 @@ int main()
 
 		// Bandera del astil junto al recorrido central del zorro.
 		// Esta compensacion apoya el modelo exportado de 3ds Max en el piso.
+		lightingShader.Use();
+
+		// Activar movimiento del viento
+		glUniform1i(
+			glGetUniformLocation(lightingShader.Program, "windEnabled"),
+			1
+		);
+
+		// Tiempo de animacion
+		glUniform1f(
+			glGetUniformLocation(lightingShader.Program, "windTime"),
+			(float)glfwGetTime()
+		);
+
+		// Posicion y escala originales
 		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(foxRoute[2].x + 3.5f, -1.73395f, foxRoute[2].z));
-		model = glm::scale(model, glm::vec3(2.0f));
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
+
+		model = glm::translate(
+			model,
+			glm::vec3(foxRoute[2].x + 3.5f, -1.73395f, foxRoute[2].z)
+		);
+
+		model = glm::scale(model, glm::vec3(2.4f));
+
+		glUniformMatrix4fv(
+			glGetUniformLocation(lightingShader.Program, "model"),
+			1, GL_FALSE, glm::value_ptr(model)
+		);
+
+		glUniform1i(
+			glGetUniformLocation(lightingShader.Program, "transparency"),
+			0
+		);
+
+		// Dibujar bandera
 		glDisable(GL_CULL_FACE);
+
 		BanderaMexico.Draw(lightingShader);
+
 		glEnable(GL_CULL_FACE);
+
+	//desactivar el viento para los demas modelos
+		glUniform1i(
+			glGetUniformLocation(lightingShader.Program, "windEnabled"),
+			0
+		);
 
 		// Puesto fruta
 		model = glm::mat4(1);
@@ -2235,6 +2271,7 @@ int main()
 
 		glEnable(GL_CULL_FACE);
 
+	
 		// Lamp object
 		lampShader.Use();
 		modelLoc = glGetUniformLocation(lampShader.Program, "model");
