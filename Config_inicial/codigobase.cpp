@@ -1,5 +1,6 @@
-// Proyecto Zocalo 
-//Se agrego banderas, luces y el angel
+Ôªø// Proyecto Zocalo 
+//Se agregaron fuesgos artificiales y mejoras de fachadas
+//Adici√≥n de astil y sombrero de charro
 
 
 #include <iostream>
@@ -82,8 +83,11 @@ glm::vec3 pointLightPositions[] = {
 	glm::vec3(0.0f, 5.0f, -30.0f),
 
 	// Luz roja
-	glm::vec3(3.5f, 5.0f, -42.0f)
+	glm::vec3(3.5f, 5.0f, -42.0f),
+
+
 };
+
 
 float vertices[] = {
 	 -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
@@ -167,17 +171,23 @@ glm::vec3 dogPos(0.0f, -1.5f, 0.0f);
 float dogYaw = 0.0f;
 float dogRot = 0.0f;
 
-// NPC
+// NPC 1
 
 float npcPosX = -4.0f;
 float npcPosZ = 2.0f;
-
 float npcVelocidad = 1.5f;
-
 float npcLimiteIzquierdo = -4.0f;
 float npcLimiteDerecho = 4.0f;
-
 int npcDireccion = 1;
+
+// NPC 2 (Nuevo - se mueve verticalmente a lo largo de la calle)
+float npc2PosZ = -10.0f;
+float npc2PosX = 2.0f;
+float npc2Velocidad = 1.2f;
+float npc2LimiteFondo = -35.0f;
+float npc2LimiteFrente = -5.0f;
+int npc2Direccion = 1;
+
 // Camara de tercera persona
 float cameraDistance = 5.5f;
 float cameraHeight = 1.0f;
@@ -368,6 +378,7 @@ GLuint LoadWallTexture(const char* path)
 GLuint wallVAO, wallVBO, wallEBO;
 
 GLuint texNorte, texSur, texEste, texOeste, texPalacio;
+GLuint texAguila;
 
 void SetupWalls()
 {
@@ -394,6 +405,7 @@ void SetupWalls()
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, wallEBO);
+
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
@@ -413,6 +425,8 @@ void SetupWalls()
 	texOeste = LoadWallTexture("images/fachadas/oeste.png");
 
 	texPalacio = LoadWallTexture("images/fachadas/palacio.jpeg");
+
+	texAguila = LoadWallTexture("images/fachadas/aguila.jpg");
 }
 
 
@@ -436,10 +450,14 @@ void DrawWall(
 	model = glm::rotate(model, glm::radians(rotation), glm::vec3(0, 1, 0));
 	model = glm::scale(model, glm::vec3(width, height, 1.0f));
 
+
+
 	glUniformMatrix4fv(
 		glGetUniformLocation(shader.Program, "model"),
 		1, GL_FALSE, glm::value_ptr(model)
 	);
+
+
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture);
@@ -447,8 +465,8 @@ void DrawWall(
 	glUniform1i(glGetUniformLocation(shader.Program, "material.diffuse"), 0);
 	glUniform1i(glGetUniformLocation(shader.Program, "material.specular"), 0);
 
-	// IluminaciÛn c·lida y uniforme para las fachadas
-	glUniform3f(glGetUniformLocation(shader.Program, "dirLight.ambient"),0.55f, 0.53f, 0.50f);
+	// IluminaciÔøΩn cÔøΩlida y uniforme para las fachadas
+	glUniform3f(glGetUniformLocation(shader.Program, "dirLight.ambient"), 0.55f, 0.53f, 0.50f);
 
 
 	glBindVertexArray(wallVAO);
@@ -457,6 +475,8 @@ void DrawWall(
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
+
+
 
 
 
@@ -471,6 +491,11 @@ int main()
 
 	// Init GLFW
 	glfwInit();
+
+	// Configurar OpenGL 3.3
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Zocalo", nullptr, nullptr);
 
@@ -561,9 +586,13 @@ int main()
 
 	Shader infoShader("info.vs", "info.frag");
 
+	Shader fireworksShader("fireworks.vs", "fireworks.frag");
+
+
 	SetupWalls();
 
 	GLint linked = GL_FALSE;
+
 
 
 
@@ -587,21 +616,35 @@ int main()
 	Model B_RightLeg((char*)"Models/B_RightLegDog.obj");
 	Model B_LeftLeg((char*)"Models/B_LeftLegDog.obj");
 	Model Piso((char*)"Models/piso/Mrf+Pavement+Set03.obj");
-	//Model Ball((char*)"Models/ball.obj");
+
 
 	Model Puesto((char*)"Models/puesto/asian food vendor.obj");
 	Model Lampara((char*)"Models/lampara/Street_lamp_1.obj");
 	Model Lantern((char*)"Models/lantern/lantern.obj");
 	Model Zorro((char*)"Models/Zorro/zorroCompleto.obj");
+	Model BanderaMexico((char*)"Models/Astil/FlagMexico.obj");
+	Model SombreroCharro((char*)"Models/Zorro/sombrero_charro.obj");
 	Model puestoFruta((char*)"Models/puesto2/fruit shop.obj");
-	Model Personas((char*)"Models/personas/Audience.obj");
 	Model Angel((char*)"Models/AngelIndependencia/AngelInd.obj");
+
+
+	Model Persona1((char*)"Models/persona1/Audience.obj");
+	Model Persona2((char*)"Models/persona2/Audience.obj");
+	Model Persona3((char*)"Models/persona3/Audience.obj");
+	Model Persona4((char*)"Models/persona4/Audience.obj");
+	Model Persona5((char*)"Models/persona5/Audience.obj");
+	Model Persona6((char*)"Models/persona6/Audience.obj");
+	Model Persona7((char*)"Models/persona7/Audience.obj");
+	Model Persona8((char*)"Models/persona8/Audience.obj");
 
 	Model carritoComida((char*)"Models/carritocomida/hot-dog-cart.obj");
 	Model Campana((char*)"Models/campana/objBell.obj");
 	Campana.PrintMaterialNames();
 
 
+
+
+	
 	// Texturas de los cuadros informativos
 	GLuint infoPozole = CrearTexturaInformativa(
 		L"EL POZOLE",
@@ -674,7 +717,40 @@ int main()
 
 	glBindVertexArray(0);
 
+	//VAO Y VBO PARA LOS FUEGOS ARTIFICIALES
+
+
+	GLuint fireworksVAO, fireworksVBO;
+
+	GLfloat fireworksVertices[] = {
+		0.0f, 0.0f, 0.0f
+	};
+
+	glGenVertexArrays(1, &fireworksVAO);
+	glGenBuffers(1, &fireworksVBO);
+
+	glBindVertexArray(fireworksVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, fireworksVBO);
+
+	glBufferData(
+		GL_ARRAY_BUFFER,
+		150 * 3 * sizeof(GLfloat),
+		nullptr,
+		GL_DYNAMIC_DRAW
+	);
+
+	glVertexAttribPointer(
+		0, 3, GL_FLOAT, GL_FALSE,
+		3 * sizeof(GLfloat), (GLvoid*)0
+	);
+
+	glEnableVertexAttribArray(0);
+
+	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
 	lightingShader.Use();
+
 	glUniform1i(glGetUniformLocation(lightingShader.Program, "Material.difuse"), 0);
 	glUniform1i(glGetUniformLocation(lightingShader.Program, "Material.specular"), 1);
 
@@ -710,6 +786,7 @@ int main()
 
 		tiempoAnteriorNPC = tiempoActualNPC;
 
+		// Actualizar NPC 1 (Horizontal)
 		npcPosX += npcVelocidad * npcDireccion * deltaTimeNPC;
 
 		if (npcPosX >= npcLimiteDerecho)
@@ -721,6 +798,20 @@ int main()
 		{
 			npcPosX = npcLimiteIzquierdo;
 			npcDireccion = 1;
+		}
+
+		// Actualizar NPC 2 (Vertical a lo largo de la calle)
+		npc2PosZ += npc2Velocidad * npc2Direccion * deltaTimeNPC;
+
+		if (npc2PosZ >= npc2LimiteFrente)
+		{
+			npc2PosZ = npc2LimiteFrente;
+			npc2Direccion = -1;
+		}
+		else if (npc2PosZ <= npc2LimiteFondo)
+		{
+			npc2PosZ = npc2LimiteFondo;
+			npc2Direccion = 1;
 		}
 
 		DoMovement();
@@ -787,7 +878,7 @@ int main()
 		{
 			ma_sound_stop(&campanaAudio);
 		}
-		
+
 
 		// Limitar intensidad entre 0 y 1
 		intensidadCampana = glm::clamp(
@@ -859,7 +950,21 @@ int main()
 		glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[1].linear"), 0.09f);
 		glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[1].quadratic"), 0.032f);
 
-		// iluminaciÛn patriotica
+		// Posiciones de las point lights 
+		glm::vec3 pointLightPositions[] = {
+			// 0: Luz animada original
+			glm::vec3(0.0f, 2.0f, 0.0f),
+
+			// 1: Luz calida original
+			glm::vec3(8.5f, 0.3f, 0.0f),
+
+			// 2, 3, 4: Luces patri√≥ticas (calle)
+			glm::vec3(-3.5f, 5.0f, -18.0f),
+			glm::vec3(0.0f, 5.0f, -30.0f),
+			glm::vec3(3.5f, 5.0f, -42.0f),
+		};
+
+		// iluminaciÔøΩn patriotica
 
 		// LUZ VERDE
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[2].position"),
@@ -918,7 +1023,8 @@ int main()
 				(base + "quadratic").c_str()), 0.032f);
 		}
 
-
+		
+		
 		// SpotLight
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "spotLight.position"), camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "spotLight.direction"), camera.GetFront().x, camera.GetFront().y, camera.GetFront().z);
@@ -946,6 +1052,97 @@ int main()
 		glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
 		glm::mat4 model(1);
+
+
+		// ======================================
+		// FUEGOS ARTIFICIALES 
+		// ======================================
+		const int NUM_PARTICULAS_POR_FUEGO = 150;
+		const int CANTIDAD_FUEGOS = 6; 
+
+		static float tiemposExplosion[CANTIDAD_FUEGOS] = { 0.0f, 0.3f, 0.6f, 0.9f, 1.2f, 1.5f };
+
+		static glm::vec3 centrosFuegos[CANTIDAD_FUEGOS] = {
+			glm::vec3(0.0f, 21.0f, 11.0f),  
+			glm::vec3(-4.0f, 19.0f, -4.0f),  // Cerca de la zona de puestos
+			glm::vec3(3.0f, 20.0f, 2.0f),    // Cerca de puestos delanteros
+			glm::vec3(-7.0f, 18.0f, -28.0f), // Zona intermedia de la plaza
+			glm::vec3(0.0f, 22.0f, -55.0f),  // Fondo (√Ångel / √Åguila)
+			glm::vec3(6.0f, 19.0f, -42.0f)   // Fondo derecha
+		};
+
+		// Colores TRICOLOR patrios (Verde, Blanco, Rojo)
+		static glm::vec3 coloresFuegos[CANTIDAD_FUEGOS] = {
+			glm::vec3(0.95f, 0.05f, 0.05f),// Rojo (para la campana)
+			glm::vec3(0.0f, 0.85f, 0.2f),  // Verde
+			glm::vec3(1.0f, 1.0f, 1.0f),   // Blanco
+			glm::vec3(0.95f, 0.05f, 0.05f),// Rojo
+			glm::vec3(0.0f, 0.85f, 0.2f),  // Verde
+			glm::vec3(1.0f, 1.0f, 1.0f)    // Blanco
+		};
+
+		static glm::vec3 velocidadesFuego[NUM_PARTICULAS_POR_FUEGO];
+		static bool inicializadoVelocidades = false;
+
+		if (!inicializadoVelocidades) {
+			for (int i = 0; i < NUM_PARTICULAS_POR_FUEGO; i++) {
+				float anguloH = i * 2.4f;
+				float anguloV = (i % 13) * 0.25f - 1.25f;
+				glm::vec3 dir(cos(anguloV) * cos(anguloH), sin(anguloV), cos(anguloV) * sin(anguloH));
+
+				// Rellenar el volumen interno de la esfera
+				float factorVolumen = 0.2f + 0.8f * ((i * 17) % 100) / 100.0f;
+				velocidadesFuego[i] = dir * (1.0f + factorVolumen * 4.0f);
+			}
+			inicializadoVelocidades = true;
+		}
+
+		fireworksShader.Use();
+		glUniformMatrix4fv(glGetUniformLocation(fireworksShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+		glUniformMatrix4fv(glGetUniformLocation(fireworksShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+		glUniformMatrix4fv(glGetUniformLocation(fireworksShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0f)));
+
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		glEnable(GL_PROGRAM_POINT_SIZE);
+
+		glBindVertexArray(fireworksVAO);
+
+		for (int f = 0; f < CANTIDAD_FUEGOS; f++) {
+			tiemposExplosion[f] += deltaTime;
+
+			if (tiemposExplosion[f] >= 2.0f) {
+				tiemposExplosion[f] = 0.0f;
+			}
+
+			float t = tiemposExplosion[f];
+			std::vector<GLfloat> posicionesFuegoTemp(NUM_PARTICULAS_POR_FUEGO * 3);
+
+			for (int i = 0; i < NUM_PARTICULAS_POR_FUEGO; i++) {
+				float friccion = exp(-1.5f * t);
+				glm::vec3 desplazamiento = velocidadesFuego[i] * (1.0f - friccion) / 1.5f;
+				glm::vec3 posicion = centrosFuegos[f] + desplazamiento + glm::vec3(0.0f, -2.5f * t * t, 0.0f);
+
+				posicionesFuegoTemp[i * 3] = posicion.x;
+				posicionesFuegoTemp[i * 3 + 1] = posicion.y;
+				posicionesFuegoTemp[i * 3 + 2] = posicion.z;
+			}
+
+			glBindBuffer(GL_ARRAY_BUFFER, fireworksVBO);
+			glBufferData(GL_ARRAY_BUFFER, posicionesFuegoTemp.size() * sizeof(GLfloat), posicionesFuegoTemp.data(), GL_DYNAMIC_DRAW);
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+			glUniform3f(
+				glGetUniformLocation(fireworksShader.Program, "objectColor"),
+				coloresFuegos[f].r, coloresFuegos[f].g, coloresFuegos[f].b
+			);
+
+			glDrawArrays(GL_POINTS, 0, NUM_PARTICULAS_POR_FUEGO);
+		}
+
+		glBindVertexArray(0);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		lightingShader.Use();
 
 		// Explanada
 
@@ -1060,16 +1257,16 @@ int main()
 		);
 
 		// Dimensiones de los muros
-		float alturaMuro = 12.0f;
-		float centroY = 4.0f;
+		float alturaMuro = 13.0f;
+		float centroY = 3.0f;
 		float anchoMuro = 32.0f;
 
 		// MURO NORTE - LADO IZQUIERDO
 		DrawWall(
 			lightingShader,
 			texNorte,
-			glm::vec3(-10.0f, centroY, -16.0f),
-			12.0f,
+			glm::vec3(-11.0f, centroY, -16.0f),
+			10.0f,
 			alturaMuro,
 			0.0f
 		);
@@ -1078,8 +1275,8 @@ int main()
 		DrawWall(
 			lightingShader,
 			texNorte,
-			glm::vec3(10.0f, centroY, -16.0f),
-			12.0f,
+			glm::vec3(11.0f, centroY, -16.0f),
+			10.0f,
 			alturaMuro,
 			0.0f
 		);
@@ -1114,18 +1311,28 @@ int main()
 			90.0f
 		);
 
-		// MURO SUR - PALACIO NACIONAL
-		DrawWall(lightingShader, texPalacio, glm::vec3(0.0f, centroY, 16.0f),
-			anchoMuro, alturaMuro, 180.0f);
+		// FACHADAS LATERALES EXTENDIDAS
 
-		// Fachada del izquierda
-		DrawWall(lightingShader, texEste,
-			glm::vec3(-7.5f, centroY, -35.5f),
-			39.0f, alturaMuro, 90.0f);
 
-		DrawWall(lightingShader, texSur,
-			glm::vec3(7.5f, centroY, -35.5f),
-			39.0f, alturaMuro, -90.0f);
+		// LADO IZQUIERDO
+		DrawWall(
+			lightingShader,
+			texEste,
+			glm::vec3(-6.1f, centroY, -51.75f),
+			71.5f,
+			alturaMuro,
+			90.0f
+		);
+
+		// LADO DERECHO
+		DrawWall(
+			lightingShader,
+			texSur,
+			glm::vec3(6.1f, centroY, -51.75f),
+			71.5f,
+			alturaMuro,
+			-90.0f
+		);
 
 		//// Edificio del fondo
 		//DrawWall(
@@ -1136,6 +1343,27 @@ int main()
 		//	alturaMuro,
 		//	0.0f
 		//);
+
+		// PALACIO NACIONAL - MURO DEL FONDO
+		DrawWall(
+			lightingShader,
+			texPalacio,
+			glm::vec3(0.0f, centroY, 15.0f),
+			32.0f,          // Ancho
+			alturaMuro,     // Misma altura que los otros muros
+			180.0f
+		);
+
+		// MURO DE FONDO - AGUILA PATRIA
+
+		DrawWall(
+			lightingShader,
+			texAguila,
+			glm::vec3(0.0f, centroY, -68.0f),
+			12.2f,
+			alturaMuro,
+			0.0f
+		);
 
 		// Volver a activar el descarte de caras
 		glEnable(GL_CULL_FACE);
@@ -1331,6 +1559,7 @@ int main()
 		);
 
 
+
 		// Body
 		glm::vec3 dogPosElevado = dogPos + glm::vec3(0.0f, 0.05f, 0.0f);
 		modelTemp = model = glm::translate(glm::mat4(1.0f), dogPosElevado);
@@ -1415,6 +1644,65 @@ int main()
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		Zorro.Draw(lightingShader);
 
+		// El sombrero sigue la misma transformacion animada del zorro.
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(foxPos.x, -2.0f + 1.2143f * 0.55f, foxPos.z));
+		model = glm::rotate(model, glm::radians(foxYaw), glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(0.55f));
+		model = glm::translate(model, glm::vec3(0.0f, 0.61f, 0.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
+		SombreroCharro.Draw(lightingShader);
+
+		// Bandera del astil junto al recorrido central del zorro.
+		// Esta compensacion apoya el modelo exportado de 3ds Max en el piso.
+		lightingShader.Use();
+
+		// Activar movimiento del viento
+		glUniform1i(
+			glGetUniformLocation(lightingShader.Program, "windEnabled"),
+			1
+		);
+
+		// Tiempo de animacion
+		glUniform1f(
+			glGetUniformLocation(lightingShader.Program, "windTime"),
+			(float)glfwGetTime()
+		);
+
+		// Posicion y escala originales
+		model = glm::mat4(1.0f);
+
+		model = glm::translate(
+			model,
+			glm::vec3(foxRoute[2].x + 3.5f, -1.73395f, foxRoute[2].z)
+		);
+
+		model = glm::scale(model, glm::vec3(2.4f));
+
+		glUniformMatrix4fv(
+			glGetUniformLocation(lightingShader.Program, "model"),
+			1, GL_FALSE, glm::value_ptr(model)
+		);
+
+		glUniform1i(
+			glGetUniformLocation(lightingShader.Program, "transparency"),
+			0
+		);
+
+		// Dibujar bandera
+		glDisable(GL_CULL_FACE);
+
+		BanderaMexico.Draw(lightingShader);
+
+		glEnable(GL_CULL_FACE);
+
+	//desactivar el viento para los demas modelos
+		glUniform1i(
+			glGetUniformLocation(lightingShader.Program, "windEnabled"),
+			0
+		);
+
 		// Puesto fruta
 		model = glm::mat4(1);
 		model = glm::translate(model, glm::vec3(-6.0f, -2.0f, -2.0f));
@@ -1489,9 +1777,9 @@ int main()
 		);
 
 		Campana.DrawMaterial(lightingShader, "blinn5SG");
-		
+
 		glDisable(GL_BLEND);
-		
+
 		//Carrito Hotdogs
 
 		model = glm::mat4(1.0f);
@@ -1683,71 +1971,281 @@ int main()
 		// Regresar al shader principal
 		lightingShader.Use();
 
-		// --- NPC 1: Cerca del poste ---
+		// ==========================================
+			// MULTITUD MASIVA POR TODA LA PLAZA Y MUROS
+			// ==========================================
+
+			// --- ZONA PERIF√âRICA Y CERCA DE LOS MUROS (Plancha: Y = -2.0f) ---
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-14.0f, -2.0f, -10.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona2.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-14.0f, -2.0f, -5.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona3.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-14.0f, -2.0f, 2.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(45.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona4.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(14.0f, -2.0f, -8.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona5.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(14.0f, -2.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona6.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(14.0f, -2.0f, 6.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(-135.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona7.Draw(lightingShader);
+
+		// Cerca del Palacio Nacional (Muro Sur / Fondo de la plaza)
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-8.0f, -2.0f, 13.5f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(0.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona8.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-4.0f, -2.0f, 13.5f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(15.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona1.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(4.0f, -2.0f, 13.5f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(-15.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona2.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(8.0f, -2.0f, 13.5f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(0.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona3.Draw(lightingShader);
+
+
+		// --- ZONA DE PUESTOS Y COMIDA ---
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-5.2f, -2.0f, -2.5f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona3.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-7.0f, -2.0f, -1.5f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(45.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona4.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-1.5f, -2.0f, -4.6f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona5.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-1.0f, -2.0f, -6.5f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(170.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona6.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(3.0f, -2.0f, 1.8f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona7.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(5.0f, -2.0f, 2.5f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(-135.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona8.Draw(lightingShader);
+
+
+		// --- CENTRO DE LA EXPLANADA ---
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(0.0f, -2.0f, -2.0f));
 		model = glm::scale(model, glm::vec3(0.01f));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		Personas.Draw(lightingShader);
+		Persona1.Draw(lightingShader);
 
-
-		// --- NPC 2: Cerca del puesto de frutas ---
 		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(5.0f, -2.0f, -4.0f));
+		model = glm::translate(model, glm::vec3(-3.0f, -2.0f, 3.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(30.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona2.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(3.5f, -2.0f, 4.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(-30.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona3.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-6.0f, -2.0f, 6.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(60.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona4.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(6.0f, -2.0f, 6.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(-60.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona5.Draw(lightingShader);
+
+
+		// --- HILERA SOBRE LAS BANQUETAS (Y = -1.70f para pisar bien la banqueta) ---
+		// Banqueta Izquierda (X = -5.5f)
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-5.5f, -1.70f, -12.0f));
 		model = glm::scale(model, glm::vec3(0.01f));
 		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0, 1, 0));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		Personas.Draw(lightingShader);
-
-
-		// NPC 3: Caminando de un lado a otro
+		Persona6.Draw(lightingShader);
 
 		model = glm::mat4(1.0f);
-
-		model = glm::translate(
-			model,
-			glm::vec3(npcPosX, -2.0f, npcPosZ)
-		);
-
-		model = glm::scale(
-			model,
-			glm::vec3(0.01f, 0.01f, 0.01f)
-		);
-
-		if (npcDireccion == 1)
-		{
-			model = glm::rotate(
-				model,
-				glm::radians(90.0f),
-				glm::vec3(0.0f, 1.0f, 0.0f)
-			);
-		}
-		else
-		{
-			model = glm::rotate(
-				model,
-				glm::radians(-90.0f),
-				glm::vec3(0.0f, 1.0f, 0.0f)
-			);
-		}
-
-		glUniformMatrix4fv(
-			modelLoc,
-			1,
-			GL_FALSE,
-			glm::value_ptr(model)
-		);
-
-		Personas.Draw(lightingShader);
-
-
-		// --- NPC 4: Cerca del centro ---
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(3.0f, -2.0f, 5.0f));
+		model = glm::translate(model, glm::vec3(-5.5f, -1.70f, -20.0f));
 		model = glm::scale(model, glm::vec3(0.01f));
-		model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0, 1, 0));
+		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0, 1, 0));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		Personas.Draw(lightingShader);
+		Persona7.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-5.5f, -1.70f, -28.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona8.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-5.5f, -1.70f, -36.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona1.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-5.5f, -1.70f, -44.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona2.Draw(lightingShader);
+
+		// Banqueta Derecha (X = 5.5f)
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(5.5f, -1.70f, -15.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona3.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(5.5f, -1.70f, -22.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona4.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(5.5f, -1.70f, -30.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona5.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(5.5f, -1.70f, -38.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona6.Draw(lightingShader);
+
+
+		// --- ESPECTADORES FRENTE AL √ÅNGEL DE LA INDEPENDENCIA (Z = -47.0f para no encimarse) ---
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-2.5f, -2.0f, -47.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0, 1, 0)); // Viendo hacia el √Ångel
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona7.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(2.5f, -2.0f, -47.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0, 1, 0)); // Viendo hacia el √Ångel
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona8.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-1.0f, -2.0f, -46.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(170.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona1.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(1.0f, -2.0f, -46.0f));
+		model = glm::scale(model, glm::vec3(0.01f));
+		model = glm::rotate(model, glm::radians(190.0f), glm::vec3(0, 1, 0));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona2.Draw(lightingShader);
+
+
+		// --- NPCs DIN√ÅMICOS EN MOVIMIENTO ---
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(npcPosX, -2.0f, npcPosZ));
+		model = glm::scale(model, glm::vec3(0.01f));
+		if (npcDireccion == 1)
+			model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		else
+			model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona7.Draw(lightingShader);
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(npc2PosX, -2.0f, npc2PosZ));
+		model = glm::scale(model, glm::vec3(0.01f));
+		if (npc2Direccion == 1)
+			model = glm::rotate(model, glm::radians(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		else
+			model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona8.Draw(lightingShader);
+		
 
 		// ANGEL DE LA INDEPENDENCIA
 		glDisable(GL_CULL_FACE);
@@ -1773,6 +2271,7 @@ int main()
 
 		glEnable(GL_CULL_FACE);
 
+	
 		// Lamp object
 		lampShader.Use();
 		modelLoc = glGetUniformLocation(lampShader.Program, "model");
@@ -1797,7 +2296,21 @@ int main()
 		glUniform3f(glGetUniformLocation(lampShader.Program, "objectColor"), 1.0f, 0.72f, 0.35f);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
+		// Pequena fuente visible dentro del farol para acompanhar su luz.
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, pointLightPositions[1]);
+		model = glm::scale(model, glm::vec3(0.10f, 0.16f, 0.10f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		glUniform3f(glGetUniformLocation(lampShader.Program, "objectColor"), 1.0f, 0.72f, 0.35f);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
 
+
+
+		glBindVertexArray(0);
+
+
+		// Dibujar cielo nocturno
+		nightSky.Draw(skyboxShader, view, projection);
 
 		glBindVertexArray(0);
 
@@ -1925,12 +2438,12 @@ void DoMovement()
 
 	if (dogPos.x >= -4.0f && dogPos.x <= 4.0f)
 	{
-		// Permite caminar por toda la calle hasta el ¡ngel
+		// Permite caminar por toda la calle hasta el ÔøΩngel
 		dogPos.z = glm::clamp(dogPos.z, -65.0f, 15.0f);
 	}
 	else
 	{
-		// Fuera de la entrada, conserva los lÌmites de la plaza
+		// Fuera de la entrada, conserva los lÔøΩmites de la plaza
 		dogPos.z = glm::clamp(dogPos.z, -15.0f, 15.0f);
 	}
 
@@ -2027,7 +2540,7 @@ void Animation()
 		FLegs = movement * 28.0f;
 		RLegs = movement * 28.0f;
 
-		// PequeÒos movimientos de cabeza y cola
+		// PequeÔøΩos movimientos de cabeza y cola
 		head = sin(walkTime * 8.0f) * 2.0f;
 		tail = sin(walkTime * 10.0f) * 5.0f;
 	}
@@ -2059,4 +2572,3 @@ void MouseCallback(GLFWwindow* window, double xPos, double yPos)
 
 	camera.ProcessMouseMovement(xOffset, yOffset);
 }
-

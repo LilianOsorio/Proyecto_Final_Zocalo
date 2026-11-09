@@ -27,6 +27,8 @@
     <ClInclude Include="Skybox.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="fireworks.frag" />
+    <None Include="fireworks.vs" />
     <None Include="info.frag" />
     <None Include="info.vs" />
     <None Include="Shader\lamp.frag" />
@@ -165,6 +167,9 @@
       <AdditionalDependencies>soil2-debug.lib;assimp-vc140-mt.lib;opengl32.lib;glew32.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
+  <PropertyGroup>
+    <LocalDebuggerWorkingDirectory>$(ProjectDir)</LocalDebuggerWorkingDirectory>
+  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
