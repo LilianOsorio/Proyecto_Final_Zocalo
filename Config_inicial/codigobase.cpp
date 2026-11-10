@@ -1,5 +1,11 @@
 ﻿// Proyecto Zocalo 
-// Se agregaron fuegos artificiales, mejoras de fachadas y aves volando en círculo
+// Equipo 2 
+// 423069439 
+// 319211454
+// 421025550
+// RECORRIDO VIRTUAL CELEBRACIÓN DEL 15 DE SEPTIEMBRE EN EL ZÓCALO DE LA CIUDAD DE MÉXICO
+// FECHA: 11/Noviembre/2026
+
 
 #include <iostream>
 #include <cmath>
@@ -482,13 +488,18 @@ int main()
 	Model Woodpecker((char*)"Models/Woodpecker/Woodpecker.obj");
 
 	GLuint infoPozole = CrearTexturaInformativa(
-		L"EL POZOLE", L"Uno de los platillos tradicionales de Mexico. Se disfruta especialmente durante las fiestas patrias."
+		L"EL GRITO DE DOLORES",
+		L"La madrugada del 16 de septiembre de 1810, Miguel Hidalgo llamo a las armas con la campana de la parroquia en Dolores, Guanajuato."
 	);
+
 	GLuint infoFruta = CrearTexturaInformativa(
-		L"FRUTAS Y ANTOJITOS", L"Los puestos y mercados forman parte de las celebraciones populares del 15 de septiembre."
+		L"LA CAMPANA DE DOLORES",
+		L"Conocida como la Campana de la Independencia. Cada 15 de septiembre a las 11:00 PM, el Presidente la repica desde Palacio Nacional."
 	);
+
 	GLuint infoHotDog = CrearTexturaInformativa(
-		L"HOT DOGS", L"Un clasico de la comida callejera. Disfruta un delicioso hot dog durante las fiestas patrias."
+		L"LOS FUEGOS PATRIOS",
+		L"La pirotecnia tricolor ilumina el Zocalo representando la alegria y el orgullo por la libertad alcanzada por los heroes patrios."
 	);
 
 	GLuint VBO, VAO;
