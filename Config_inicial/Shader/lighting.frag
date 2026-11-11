@@ -1,5 +1,5 @@
 #version 330 core
-#define NUMBER_OF_POINT_LIGHTS 5
+#define NUMBER_OF_POINT_LIGHTS 9
 struct Material
 
 {
@@ -104,6 +104,12 @@ uniform Material material;
 
 uniform int transparency;
 
+uniform int facadeLightsOn;
+
+uniform int decorLightsOn;
+
+uniform int wallTricolorOn;
+
 
 
 // Function prototypes
@@ -130,26 +136,41 @@ void main( )
 
     // Directional lighting
 
-    vec3 result = CalcDirLight( dirLight, norm, viewDir );
+  vec3 result = CalcDirLight(dirLight, norm, viewDir);
 
-    
-
-    // Point lights
-
-    for ( int i = 0; i < NUMBER_OF_POINT_LIGHTS; i++ )
-
+for (int i = 0; i < NUMBER_OF_POINT_LIGHTS; i++)
+{
+    // Luces decorativas y faros
+    if ((i < 5 || i == 8) && decorLightsOn == 1)
     {
-
-        result += CalcPointLight( pointLights[i], norm, FragPos, viewDir );
-
+        result += CalcPointLight(pointLights[i], norm, FragPos, viewDir);
     }
 
-    
+    // Luces de las fachadas
+    if (i >= 5 && i < 8 && facadeLightsOn == 1)
+    {
+        result += CalcPointLight(pointLights[i], norm, FragPos, viewDir);
+    }
+}
 
-    // Spot light
+result += CalcSpotLight(spotLight, norm, FragPos, viewDir);
 
-    result += CalcSpotLight( spotLight, norm, FragPos, viewDir );
+// Iluminacion tricolor exclusiva para las fachadas
+if (wallTricolorOn == 1)
+{
+    vec3 verde = vec3(0.72, 1.0, 0.78);
+    vec3 blanco = vec3(1.0, 0.94, 0.82);
+    vec3 rojo = vec3(1.0, 0.72, 0.68);
 
+    // Transiciones suaves entre los tres colores
+    float transicionVerde = smoothstep(0.29, 0.38, TexCoords.x);
+    float transicionRojo = smoothstep(0.62, 0.71, TexCoords.x);
+
+    vec3 colorTricolor = mix(verde, blanco, transicionVerde);
+    colorTricolor = mix(colorTricolor, rojo, transicionRojo);
+
+    result *= colorTricolor;
+}
 
 
    vec4 texColor = texture(material.diffuse, TexCoords);

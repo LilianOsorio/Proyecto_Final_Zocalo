@@ -71,13 +71,23 @@ bool firstMouse = true;
 glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
 bool active = false;
 
+bool lucesFachadaActivas = true;
+bool lucesDecorativasActivas = true;
+float ambienteFachada = 0.55f;
+
 // Positions of the point lights
 glm::vec3 pointLightPositions[] = {
-	glm::vec3(0.0f, 2.0f, 0.0f),
-	glm::vec3(8.5f, 0.3f, 0.0f),
-	glm::vec3(-3.5f, 5.0f, -18.0f),
-	glm::vec3(0.0f, 5.0f, -30.0f),
-	glm::vec3(3.5f, 5.0f, -42.0f),
+	glm::vec3(0.0f, 2.0f, 0.0f),       // Luz 0
+	glm::vec3(8.5f, 0.3f, 0.0f),       // Luz 1
+	glm::vec3(-3.5f, 5.0f, -18.0f),    // Luz 2
+	glm::vec3(0.0f, 5.0f, -30.0f),     // Luz 3
+	glm::vec3(3.5f, 5.0f, -42.0f),     // Luz 4
+
+	// luces de la fachada del Palacio
+	glm::vec3(-9.0f, 6.0f, 12.0f),     // Luz 5
+	glm::vec3(0.0f, 6.0f, 12.0f),      // Luz 6
+	glm::vec3(9.0f, 6.0f, 12.0f),       // Luz 7
+	glm::vec3(-8.5f, 0.3f, 0.0f)       // Luz 8
 };
 
 float vertices[] = {
@@ -144,12 +154,17 @@ const glm::vec3 foxRoute[] = {
 	glm::vec3(-12.0f, -2.0f, 12.0f),
 	glm::vec3(-12.0f, -2.0f, -12.0f),
 	glm::vec3(0.0f, -2.0f, -12.0f),
-	glm::vec3(0.0f, -2.0f, 12.0f),
+
+	// Se desvía antes de llegar a la campana
+	glm::vec3(0.0f, -2.0f, 8.0f),
+
 	glm::vec3(12.0f, -2.0f, 12.0f),
 	glm::vec3(12.0f, -2.0f, -12.0f),
 	glm::vec3(-12.0f, -2.0f, -12.0f)
 };
+
 const int foxRouteCount = sizeof(foxRoute) / sizeof(foxRoute[0]);
+
 glm::vec3 foxPos = foxRoute[0];
 int foxNextWaypoint = 1;
 float foxYaw = 0.0f;
@@ -175,10 +190,32 @@ float npc2LimiteFondo = -35.0f;
 float npc2LimiteFrente = -5.0f;
 int npc2Direccion = 1;
 
+// NPC 3: Recorrido cerca de la campana
+float npc3PosX = 3.0f;
+float npc3PosZ = 10.0f;
+float npc3Velocidad = 1.0f;
+int npc3Direccion = 1;
+
+// NPC 4: Recorrido por la explanada
+float npc4PosX = 7.0f;
+float npc4PosZ = 10.0f;
+float npc4Velocidad = 1.0f;
+int npc4Direccion = 1;
+
+// NPC 5: Recorrido por la zona central
+float npc5PosX = -9.0f;
+float npc5PosZ = 7.0f;
+float npc5Velocidad = 0.8f;
+int npc5Direccion = 1;
+
 // Camara
 float cameraDistance = 5.5f;
 float cameraHeight = 1.0f;
 bool step = false;
+
+// Vistas de camara
+bool vistaPanoramica = false;
+bool teclaCAntes = false;
 
 // Deltatime
 GLfloat deltaTime = 0.0f;
@@ -360,14 +397,70 @@ void DrawWall(Shader shader, GLuint texture, glm::vec3 position, float width, fl
 	glUniform1i(glGetUniformLocation(shader.Program, "material.diffuse"), 0);
 	glUniform1i(glGetUniformLocation(shader.Program, "material.specular"), 0);
 
-	glUniform3f(glGetUniformLocation(shader.Program, "dirLight.ambient"), 0.55f, 0.53f, 0.50f);
+	// Activar el efecto tricolor solamente en las fachadas
+	glUniform1i(
+		glGetUniformLocation(shader.Program, "wallTricolorOn"),
+		lucesDecorativasActivas ? 1 : 0
+	);
+
+	// El ambiente de las fachadas se controla con L
+	float ambiente = lucesDecorativasActivas ? 0.55f : 0.12f;
+
+	glUniform3f(
+		glGetUniformLocation(shader.Program, "dirLight.ambient"),
+		ambiente, ambiente * 0.96f, ambiente * 0.91f
+	);
 
 	glBindVertexArray(wallVAO);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
 
+	// Desactivar el efecto para los demas modelos
+	glUniform1i(
+		glGetUniformLocation(shader.Program, "wallTricolorOn"),
+		0
+	);
+
+
+
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
+
+// ANIMACION DE BANDERA MEDIANTE KEYFRAMES
+float ObtenerAmplitudViento(float tiempo)
+{
+	const float tiempos[] = {
+		0.0f, 1.0f, 2.0f, 3.0f, 4.0f
+	};
+
+	const float amplitudes[] = {
+		0.50f, 1.80f, 0.70f, 2.00f, 0.50f
+	};
+
+	const int cantidad = 5;
+	const float duracion = 4.0f;
+
+	float fase = fmod(tiempo, duracion);
+
+	for (int i = 0; i < cantidad - 1; i++)
+	{
+		if (fase >= tiempos[i] && fase < tiempos[i + 1])
+		{
+			float progreso =
+				(fase - tiempos[i]) /
+				(tiempos[i + 1] - tiempos[i]);
+
+			return glm::mix(
+				amplitudes[i],
+				amplitudes[i + 1],
+				progreso
+			);
+		}
+	}
+
+	return amplitudes[cantidad - 1];
+}
+
 
 int main()
 {
@@ -381,7 +474,7 @@ int main()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Zocalo", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Recorrido Virtual: Noche Mexicana - 423069439, 319211454, 421025550  ", nullptr, nullptr);
 
 	if (nullptr == window)
 	{
@@ -483,7 +576,7 @@ int main()
 	Model carritoComida((char*)"Models/carritocomida/hot-dog-cart.obj");
 	Model Campana((char*)"Models/campana/objBell.obj");
 
-	// CARGA DE LAS AVES (NUEVO)
+	// CARGA DE LAS AVES
 	Model PeregrineFalcon((char*)"Models/peregrine falcon/peregrine falcon.obj");
 	Model Woodpecker((char*)"Models/Woodpecker/Woodpecker.obj");
 
@@ -549,6 +642,7 @@ int main()
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	lightingShader.Use();
+	
 	glUniform1i(glGetUniformLocation(lightingShader.Program, "Material.difuse"), 0);
 	glUniform1i(glGetUniformLocation(lightingShader.Program, "Material.specular"), 1);
 
@@ -578,6 +672,48 @@ int main()
 		npc2PosZ += npc2Velocidad * npc2Direccion * deltaTimeNPC;
 		if (npc2PosZ >= npc2LimiteFrente) { npc2PosZ = npc2LimiteFrente; npc2Direccion = -1; }
 		else if (npc2PosZ <= npc2LimiteFondo) { npc2PosZ = npc2LimiteFondo; npc2Direccion = 1; }
+
+		// NPC 3
+		npc3PosX += npc3Velocidad * npc3Direccion * deltaTimeNPC;
+
+		if (npc3PosX >= 5.0f)
+		{
+			npc3PosX = 5.0f;
+			npc3Direccion = -1;
+		}
+		else if (npc3PosX <= 2.5f)
+		{
+			npc3PosX = 2.5f;
+			npc3Direccion = 1;
+		}
+
+		// NPC 4: Lado derecho de la explanada
+		npc4PosZ += npc4Velocidad * npc4Direccion * deltaTimeNPC;
+
+		if (npc4PosZ >= 12.0f)
+		{
+			npc4PosZ = 12.0f;
+			npc4Direccion = -1;
+		}
+		else if (npc4PosZ <= 7.0f)
+		{
+			npc4PosZ = 7.0f;
+			npc4Direccion = 1;
+		}
+
+		// NPC 5: Lado izquierdo de la explanada
+		npc5PosZ += npc5Velocidad * npc5Direccion * deltaTimeNPC;
+
+		if (npc5PosZ >= 10.0f)
+		{
+			npc5PosZ = 10.0f;
+			npc5Direccion = -1;
+		}
+		else if (npc5PosZ <= 4.0f)
+		{
+			npc5PosZ = 4.0f;
+			npc5Direccion = 1;
+		}
 
 		DoMovement();
 		Animation();
@@ -617,13 +753,29 @@ int main()
 		glm::mat4 modelTemp = glm::mat4(1.0f);
 
 		lightingShader.Use();
+		glUniform1i(
+			glGetUniformLocation(lightingShader.Program, "facadeLightsOn"),
+			lucesFachadaActivas ? 1 : 0
+		);
+
+		glUniform1i(
+			glGetUniformLocation(lightingShader.Program, "decorLightsOn"),
+			lucesDecorativasActivas ? 1 : 0
+		);
+
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "diffuse"), 0);
 
 		GLint viewPosLoc = glGetUniformLocation(lightingShader.Program, "viewPos");
 		glUniform3f(viewPosLoc, camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
 
-		glUniform3f(glGetUniformLocation(lightingShader.Program, "dirLight.direction"), -0.2f, -1.0f, -0.3f);
-		glUniform3f(glGetUniformLocation(lightingShader.Program, "dirLight.ambient"), 0.30f, 0.30f, 0.40f);
+		// Ambiente general controlado con F
+		float ambienteGeneral = lucesFachadaActivas ? 0.30f : 0.08f;
+
+		glUniform3f(
+			glGetUniformLocation(lightingShader.Program, "dirLight.ambient"),
+			ambienteGeneral, ambienteGeneral, ambienteGeneral + 0.10f
+		);
+
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "dirLight.diffuse"), 0.45f, 0.45f, 0.50f);
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "dirLight.specular"), 0.15f, 0.15f, 0.20f);
 
@@ -665,6 +817,60 @@ int main()
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[4].ambient"), 0.12f, 0.035f, 0.035f);
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[4].diffuse"), 0.65f, 0.18f, 0.18f);
 		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[4].specular"), 0.25f, 0.12f, 0.12f);
+
+		// Luces de fachadas
+
+		// LUZ 5 - Lado izquierdo
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[5].position"),
+			pointLightPositions[5].x, pointLightPositions[5].y, pointLightPositions[5].z);
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[5].ambient"), 0.08f, 0.045f, 0.015f);
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[5].diffuse"), 1.0f, 0.65f, 0.28f);
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[5].specular"), 0.3f, 0.2f, 0.1f);
+
+		// LUZ 6 - Centro
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[6].position"),
+			pointLightPositions[6].x, pointLightPositions[6].y, pointLightPositions[6].z);
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[6].ambient"), 0.08f, 0.045f, 0.015f);
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[6].diffuse"), 1.0f, 0.65f, 0.28f);
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[6].specular"), 0.3f, 0.2f, 0.1f);
+
+		// LUZ 7 - Lado derecho
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[7].position"),
+			pointLightPositions[7].x, pointLightPositions[7].y, pointLightPositions[7].z);
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[7].ambient"), 0.08f, 0.045f, 0.015f);
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[7].diffuse"), 1.0f, 0.65f, 0.28f);
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[7].specular"), 0.3f, 0.2f, 0.1f);
+
+		// LUZ 8 - Segundo faro
+		glUniform3f(
+			glGetUniformLocation(lightingShader.Program, "pointLights[8].position"),
+			pointLightPositions[8].x,
+			pointLightPositions[8].y,
+			pointLightPositions[8].z
+		);
+
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[8].ambient"),
+			0.12f, 0.075f, 0.035f);
+
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[8].diffuse"),
+			1.0f, 0.68f, 0.32f);
+
+		glUniform3f(glGetUniformLocation(lightingShader.Program, "pointLights[8].specular"),
+			0.9f, 0.72f, 0.45f);
+
+		glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[8].constant"), 1.0f);
+		glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[8].linear"), 0.09f);
+		glUniform1f(glGetUniformLocation(lightingShader.Program, "pointLights[8].quadratic"), 0.032f);
+
+		// Atenuación de las tres luces nuevas
+		for (int i = 5; i <= 7; i++)
+		{
+			std::string base = "pointLights[" + std::to_string(i) + "].";
+
+			glUniform1f(glGetUniformLocation(lightingShader.Program, (base + "constant").c_str()), 1.0f);
+			glUniform1f(glGetUniformLocation(lightingShader.Program, (base + "linear").c_str()), 0.07f);
+			glUniform1f(glGetUniformLocation(lightingShader.Program, (base + "quadratic").c_str()), 0.017f);
+		}
 
 		for (int i = 2; i <= 4; i++)
 		{
@@ -958,6 +1164,7 @@ int main()
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 		Lampara.Draw(lightingShader);
 
+		// FARO 1
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(8.5f, -2.5f, 0.0f));
 		model = glm::scale(model, glm::vec3(0.2f));
@@ -965,6 +1172,15 @@ int main()
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		Lantern.Draw(lightingShader);
 
+		// FARO 2
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-8.5f, -2.5f, 0.0f));
+		model = glm::scale(model, glm::vec3(0.2f));
+		model = glm::translate(model, glm::vec3(-22.48075f, -0.3702f, 0.11045f));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Lantern.Draw(lightingShader);
+
+	
 		// Zorro
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(foxPos.x, -2.0f + 1.2143f * 0.55f, foxPos.z));
@@ -982,9 +1198,23 @@ int main()
 		glUniform1i(glGetUniformLocation(lightingShader.Program, "transparency"), 0);
 		SombreroCharro.Draw(lightingShader);
 
-		// Bandera
-		glUniform1i(glGetUniformLocation(lightingShader.Program, "windEnabled"), 1);
-		glUniform1f(glGetUniformLocation(lightingShader.Program, "windTime"), (float)glfwGetTime());
+		// Bandera con animacion por KeyFrames
+		float tiempoBandera = (float)glfwGetTime();
+
+		glUniform1i(
+			glGetUniformLocation(lightingShader.Program, "windEnabled"),
+			1
+		);
+
+		glUniform1f(
+			glGetUniformLocation(lightingShader.Program, "windTime"),
+			tiempoBandera
+		);
+
+		glUniform1f(
+			glGetUniformLocation(lightingShader.Program, "windAmplitude"),
+			ObtenerAmplitudViento(tiempoBandera)
+		);
 
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(foxRoute[2].x + 3.5f, -1.73395f, foxRoute[2].z));
@@ -1145,6 +1375,45 @@ int main()
 		model = glm::scale(model, glm::vec3(0.01f));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		Persona8.Draw(lightingShader);
+
+		// NPC 3
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(npc3PosX, -2.0f, npc3PosZ));
+		model = glm::scale(model, glm::vec3(0.01f));
+
+		if (npc3Direccion == 1)
+			model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0, 1, 0));
+		else
+			model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(0, 1, 0));
+
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona1.Draw(lightingShader);
+
+		// NPC 4
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(npc4PosX, -2.0f, npc4PosZ));
+		model = glm::scale(model, glm::vec3(0.01f));
+
+		if (npc4Direccion == 1)
+			model = glm::rotate(model, glm::radians(0.0f), glm::vec3(0, 1, 0));
+		else
+			model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0, 1, 0));
+
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona3.Draw(lightingShader);
+
+		// NPC 5
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(npc5PosX, -2.0f, npc5PosZ));
+		model = glm::scale(model, glm::vec3(0.01f));
+
+		if (npc5Direccion == 1)
+			model = glm::rotate(model, glm::radians(0.0f), glm::vec3(0, 1, 0));
+		else
+			model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0, 1, 0));
+
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		Persona5.Draw(lightingShader);
 
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(-4.0f, -2.0f, 13.5f));
@@ -1308,7 +1577,7 @@ int main()
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(-2.5f, -2.0f, -47.0f));
 		model = glm::scale(model, glm::vec3(0.01f));
-		model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0, 1, 0));
+		model = glm::rotate(model, glm::radians(0.0f), glm::vec3(0, 1, 0));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		Persona7.Draw(lightingShader);
 
@@ -1322,14 +1591,14 @@ int main()
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(-1.0f, -2.0f, -46.0f));
 		model = glm::scale(model, glm::vec3(0.01f));
-		model = glm::rotate(model, glm::radians(170.0f), glm::vec3(0, 1, 0));
+		model = glm::rotate(model, glm::radians(-10.0f), glm::vec3(0, 1, 0));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		Persona1.Draw(lightingShader);
 
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(1.0f, -2.0f, -46.0f));
 		model = glm::scale(model, glm::vec3(0.01f));
-		model = glm::rotate(model, glm::radians(190.0f), glm::vec3(0, 1, 0));
+		model = glm::rotate(model, glm::radians(10.0f), glm::vec3(0, 1, 0));
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		Persona2.Draw(lightingShader);
 
@@ -1458,6 +1727,81 @@ void DrawSidewalk(Shader shader, GLuint VAO, glm::vec3 position, glm::vec3 size,
 	glBindVertexArray(0);
 }
 
+
+//COLISIONES 
+
+struct CajaColision
+{
+	float minX;
+	float maxX;
+	float minZ;
+	float maxZ;
+};
+
+bool HayColisionConObjeto(float x, float z)
+{
+	// Radio aproximado del perro
+	const float radioPerro = 0.35f;
+
+	// Hitboxes de los objetos del escenario
+	const CajaColision objetos[] =
+	{
+		// Puesto de comida
+		{ 1.15f, 4.85f, -1.5f, 1.5f },
+
+		// Lampara
+		{ -2.75f, -1.25f, -0.85f, 0.85f },
+
+		// Puesto de frutas
+		{ -7.8f, -4.2f, -3.8f, -0.2f },
+
+		// Carrito de hot dogs
+		{ -2.6f, -0.4f, -7.1f, -4.9f },
+
+		// Campana
+		{ -1.5f, 1.5f, 9.5f, 12.5f },
+
+		// Faro
+		{ 3.5f, 4.5f, -0.6f, 0.7f },
+
+		// Angel de la Independencia
+		{ -2.5f, 2.5f, -57.0f, -50.0f },
+
+		// Bandera de México
+		{ 2.3f, 6.7f, -6.5f, -12.0f },
+	};
+
+	const int cantidadObjetos =
+		sizeof(objetos) / sizeof(objetos[0]);
+
+	for (int i = 0; i < cantidadObjetos; i++)
+	{
+		float puntoX = glm::clamp(
+			x, objetos[i].minX, objetos[i].maxX
+		);
+
+		float puntoZ = glm::clamp(
+			z, objetos[i].minZ, objetos[i].maxZ
+		);
+
+		float distanciaX = x - puntoX;
+		float distanciaZ = z - puntoZ;
+
+		float distanciaCuadrada =
+			distanciaX * distanciaX +
+			distanciaZ * distanciaZ;
+
+		if (distanciaCuadrada <= radioPerro * radioPerro)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+
+
 void DoMovement()
 {
 	bool moving = false;
@@ -1490,17 +1834,50 @@ void DoMovement()
 	float yawRad = glm::radians(dogYaw);
 	glm::vec3 forward(sin(yawRad), 0.0f, cos(yawRad));
 
+
+	// Movimiento con deteccion de colisiones
+	glm::vec3 desplazamiento(0.0f);
+
 	if (keys[GLFW_KEY_W])
 	{
-		dogPos += forward * moveSpeed * dt;
-		moving = true;
+		desplazamiento += forward;
 	}
 
 	if (keys[GLFW_KEY_S])
 	{
-		dogPos -= forward * moveSpeed * dt;
-		moving = true;
+		desplazamiento -= forward;
 	}
+
+	// Evitar que el movimiento diagonal sea mas rapido
+	if (glm::length(desplazamiento) > 0.0f)
+	{
+		desplazamiento = glm::normalize(desplazamiento);
+	}
+
+	desplazamiento *= moveSpeed * dt;
+
+	// Comprobar movimiento en X
+	float nuevoX = dogPos.x + desplazamiento.x;
+
+	if (!HayColisionConObjeto(nuevoX, dogPos.z))
+	{
+		if (nuevoX != dogPos.x)
+			moving = true;
+
+		dogPos.x = nuevoX;
+	}
+
+	// Comprobar movimiento en Z
+	float nuevoZ = dogPos.z + desplazamiento.z;
+
+	if (!HayColisionConObjeto(dogPos.x, nuevoZ))
+	{
+		if (nuevoZ != dogPos.z)
+			moving = true;
+
+		dogPos.z = nuevoZ;
+	}
+
 
 	dogRot = dogYaw;
 	dogAnim = moving ? 1 : 0;
@@ -1519,8 +1896,34 @@ void DoMovement()
 
 	dogPos.y = -1.5f;
 
-	glm::vec3 cameraPos = dogPos - forward * cameraDistance + glm::vec3(0.0f, cameraHeight, 0.0f);
-	glm::vec3 lookTarget = dogPos + glm::vec3(0.0f, 0.35f, 0.0f);
+	// Alternar vista panoramica con C
+	if (keys[GLFW_KEY_C] && !teclaCAntes)
+	{
+		vistaPanoramica = !vistaPanoramica;
+	}
+
+	teclaCAntes = keys[GLFW_KEY_C];
+
+	// Camara siguiendo al perrito o vista panoramica
+	glm::vec3 cameraPos;
+	glm::vec3 lookTarget;
+
+	if (vistaPanoramica)
+	{
+		// Vista panoramica: mas alejada 
+		cameraPos = dogPos - forward * 10.5f
+			+ glm::vec3(0.0f, 4.0f, 0.0f);
+
+		lookTarget = dogPos + glm::vec3(0.0f, 1.5f, 0.0f);
+	}
+	else
+	{
+		// Vista normal: sigue al perrito
+		cameraPos = dogPos - forward * cameraDistance
+			+ glm::vec3(0.0f, cameraHeight, 0.0f);
+
+		lookTarget = dogPos + glm::vec3(0.0f, 0.35f, 0.0f);
+	}
 
 	camera.SetPositionAndLookAt(cameraPos, lookTarget);
 
@@ -1558,6 +1961,16 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 	if (keys[GLFW_KEY_B])
 	{
 		dogAnim = 1;
+	}
+
+	if (key == GLFW_KEY_F && action == GLFW_PRESS)
+	{
+		lucesFachadaActivas = !lucesFachadaActivas;
+	}
+
+	if (key == GLFW_KEY_L && action == GLFW_PRESS)
+	{
+		lucesDecorativasActivas = !lucesDecorativasActivas;
 	}
 }
 

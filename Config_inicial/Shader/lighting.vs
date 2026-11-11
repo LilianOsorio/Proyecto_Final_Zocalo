@@ -13,6 +13,8 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
+uniform float windAmplitude;
+
 // Control del movimiento de la bandera
 uniform float windTime;
 uniform int windEnabled;
@@ -30,7 +32,7 @@ float influencia = smoothstep(-0.70, 0.75, position.x);
 
 // Intensidad variable del viento
 float fuerzaViento =
-    0.24 + 0.07 * sin(windTime * 0.9);
+    0.32 + 0.07 * sin(windTime * 0.9) * windAmplitude;
 
 // Onda principal amplia
 float fase1 =
@@ -50,7 +52,7 @@ float onda =
 // Movimiento adicional para dar sensacion de tela
 float ondulacionExtra =
     sin(windTime * 2.0 - position.x * 4.0)
-    * 0.06 * influencia;
+    * 0.09 * influencia;
 
 // Aplicar movimiento
 posicionAnimada.z += onda + ondulacionExtra;
