@@ -403,3 +403,13 @@ FodyWeavers.xsd
 !*.MP3
 !*.wav
 !*.WAV
+
+# Excepciones para liberias externas
+!External\ Libraries/
+!External\ Libraries/**
+
+# Excluir archivos pesados o temporales de compilación internos
+External\ Libraries/**/*.ilk
+External\ Libraries/**/*.pdb
+External\ Libraries/**/*.exp
+External\ Libraries/**/*.ipdb
