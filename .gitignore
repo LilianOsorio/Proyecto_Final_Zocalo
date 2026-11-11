@@ -413,3 +413,8 @@ External\ Libraries/**/*.ilk
 External\ Libraries/**/*.pdb
 External\ Libraries/**/*.exp
 External\ Libraries/**/*.ipdb
+
+!External\ Libraries/*/bin/
+!External\ Libraries/*/bin/**
+!External\ Libraries/*/lib/
+!External\ Libraries/*/lib/**
