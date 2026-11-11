@@ -404,6 +404,8 @@ FodyWeavers.xsd
 !*.wav
 !*.WAV
 
-# Excepciones para liberias externas
+# ==========================================
+# PERMITIR EXTERNAL LIBRARIES COMPLETA
+# ==========================================
 !External\ Libraries/
 !External\ Libraries/**
