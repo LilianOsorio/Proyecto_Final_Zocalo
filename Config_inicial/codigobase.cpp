@@ -57,6 +57,8 @@ void DrawSidewalk(
 	glm::vec3 color
 );
 
+void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
+
 // Window dimensions
 const GLuint WIDTH = 1280, HEIGHT = 720;
 int SCREEN_WIDTH, SCREEN_HEIGHT;
@@ -470,11 +472,12 @@ int main()
 
 	glfwInit();
 
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	/*glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);*/
 
 	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Recorrido Virtual: Noche Mexicana - 423069439, 319211454, 421025550  ", nullptr, nullptr);
+
 
 	if (nullptr == window)
 	{
@@ -487,6 +490,8 @@ int main()
 	glfwGetFramebufferSize(window, &SCREEN_WIDTH, &SCREEN_HEIGHT);
 
 	glfwSetKeyCallback(window, KeyCallback);
+
+	glfwSetFramebufferSizeCallback(window, FramebufferSizeCallback);
 
 	glewExperimental = GL_TRUE;
 	if (GLEW_OK != glewInit())
@@ -651,7 +656,9 @@ int main()
 
 	// Game loop
 	while (!glfwWindowShouldClose(window))
+
 	{
+		glm::mat4 projection = glm::perspective(glm::radians(60.0f), (GLfloat)SCREEN_WIDTH / (GLfloat)SCREEN_HEIGHT, 0.1f, 100.0f);
 		GLfloat currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
@@ -1933,6 +1940,13 @@ void DoMovement()
 	if (keys[GLFW_KEY_H]) pointLightPositions[0].y -= 0.01f;
 	if (keys[GLFW_KEY_U]) pointLightPositions[0].z -= 0.1f;
 	if (keys[GLFW_KEY_J]) pointLightPositions[0].z += 0.01f;
+}
+
+void FramebufferSizeCallback(GLFWwindow* window, int width, int height)
+{
+	SCREEN_WIDTH = width;
+	SCREEN_HEIGHT = height;
+	glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 }
 
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode)
